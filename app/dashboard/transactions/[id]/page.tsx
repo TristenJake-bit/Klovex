@@ -22,11 +22,16 @@ export default function TransactionDetailPage() {
   const [note, setNote] = useState('')
   const [savingNote, setSavingNote] = useState(false)
   const [timeline, setTimeline] = useState<any[]>([])
+  const [documents, setDocuments] = useState<any[]>([])
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => {
       setTx(data); setLoading(false)
+    })
+    supabase.from('documents').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => {
+      setDocuments(data || [])
     })
     supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => {
       setTimeline(data || [])
@@ -50,6 +55,31 @@ export default function TransactionDetailPage() {
     }).select().single()
     if (data) setTimeline((t) => [data, ...t])
     setNote(''); setSavingNote(false)
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const filePath = `${id}/${Date.now()}_${file.name}`
+    const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file)
+    if (!uploadError) {
+      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
+      await (supabase as any).from('documents').insert({
+        transaction_id: id,
+        name: file.name,
+        url: publicUrl,
+        uploaded_by: user?.id,
+        file_type: file.type,
+        file_size: file.size,
+      })
+      const { data } = await (supabase as any).from('documents').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
+      setDocuments(data || [])
+    }
+    setUploading(false)
+    e.target.value = ''
   }
 
   if (loading) return <div className="p-8 text-gray-400">Loading...</div>
@@ -105,6 +135,26 @@ export default function TransactionDetailPage() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+      <div className="card p-6 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2>
+          <label className="btn-primary px-4 py-2 text-sm cursor-pointer">
+            {uploading ? 'Uploading...' : 'Upload Document'}
+            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" disabled={uploading} />
+          </label>
+        </div>
+        <div className="space-y-2">
+          {documents.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No documents yet</p> : documents.map((doc: any) => (
+            <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-brand-500 flex-shrink-0" />
+                <span className="text-sm text-gray-700 font-medium">{doc.name}</span>
+              </div>
+              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">View</a>
+            </div>
+          ))}
         </div>
       </div>
     </div>
