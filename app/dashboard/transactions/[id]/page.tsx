@@ -1,99 +1,74 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, DollarSign, FileText, Clock } from 'lucide-react'
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  contract: 'bg-blue-100 text-blue-700',
-  inspection: 'bg-purple-100 text-purple-700',
-  closed: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
-}
-
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
+const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
 export default function TransactionDetailPage() {
-  const params = useParams()
-  const id = params.id as string
-  const [tx, setTx] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [note, setNote] = useState('')
-  const [savingNote, setSavingNote] = useState(false)
-  const [timeline, setTimeline] = useState<any[]>([])
-  const [documents, setDocuments] = useState<any[]>([])
-  const [uploading, setUploading] = useState(false)
-
+  const params = useParams(); const id = params.id as string
+  const [tx, setTx] = useState<any>(null); const [loading, setLoading] = useState(true)
+  const [note, setNote] = useState(''); const [savingNote, setSavingNote] = useState(false)
+  const [timeline, setTimeline] = useState<any[]>([]); const [documents, setDocuments] = useState<any[]>([])
+  const [uploading, setUploading] = useState(false); const [analyses, setAnalyses] = useState<Record<string,any>>({})
+  const [analyzingDoc, setAnalyzingDoc] = useState<string|null>(null); const [expandedAnalysis, setExpandedAnalysis] = useState<string|null>(null)
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => {
-      setTx(data); setLoading(false)
-    })
+    supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
     supabase.from('documents').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => {
-      setDocuments(data || [])
+      setDocuments(data || []); if (data) data.forEach((doc: any) => loadAnalysis(doc.id))
     })
-    supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => {
-      setTimeline(data || [])
-    })
+    supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
   }, [id])
-
+  async function loadAnalysis(docId: string) {
+    const supabase = createClient()
+    const { data } = await (supabase as any).from('document_analyses').select('*').eq('document_id', docId).single()
+    if (data) setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+  }
   async function handleStatusChange(status: string) {
     const supabase = createClient()
     await (supabase as any).from('transactions').update({ status }).eq('id', id)
     setTx((t: any) => ({ ...t, status }))
   }
-
   async function addNote(e: React.FormEvent) {
-    e.preventDefault()
-    if (!note.trim()) return
-    setSavingNote(true)
+    e.preventDefault(); if (!note.trim()) return; setSavingNote(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await (supabase as any).from('timeline_events').insert({
-      transaction_id: id, author_id: user?.id, type: 'note', content: note,
-    }).select().single()
-    if (data) setTimeline((t) => [data, ...t])
-    setNote(''); setSavingNote(false)
+    const { data } = await (supabase as any).from('timeline_events').insert({ transaction_id: id, author_id: user?.id, type: 'note', content: note }).select().single()
+    if (data) setTimeline((t) => [data, ...t]); setNote(''); setSavingNote(false)
   }
-
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
+    const file = e.target.files?.[0]; if (!file) return; setUploading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const filePath = `${id}/${Date.now()}_${file.name}`
     const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file)
     if (!uploadError) {
       const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
-      await (supabase as any).from('documents').insert({
-        transaction_id: id,
-        name: file.name,
-        url: publicUrl,
-        uploaded_by: user?.id,
-        file_type: file.type,
-        file_size: file.size,
-      })
-      const { data } = await (supabase as any).from('documents').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
-      setDocuments(data || [])
+      const { data: docData } = await (supabase as any).from('documents').insert({ transaction_id: id, name: file.name, url: publicUrl, uploaded_by: user?.id, file_type: file.type, file_size: file.size }).select().single()
+      if (docData) { setDocuments((prev) => [docData, ...prev]); analyzeDocument(docData.id, publicUrl, file.name) }
     }
-    setUploading(false)
-    e.target.value = ''
+    setUploading(false); e.target.value = ''
   }
-
-  if (loading) return <div className="p-8 text-gray-400">Loading...</div>
-  if (!tx) return <div className="p-8 text-gray-400">Transaction not found</div>
-
+  async function analyzeDocument(docId: string, docUrl: string, docName: string) {
+    setAnalyzingDoc(docId); setExpandedAnalysis(docId)
+    try {
+      const response = await fetch('/api/analyze-document', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: docId, documentUrl: docUrl, documentName: docName }) })
+      const data = await response.json()
+      if (data.analysis) setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+    } catch (err) { console.error('Analysis failed:', err) }
+    setAnalyzingDoc(null)
+  }
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
   const fmtMoney = (n: number) => n ? `$${n.toLocaleString()}` : '—'
-
+  const fmtSize = (b: number) => b < 1048576 ? `${(b/1024).toFixed(0)} KB` : `${(b/1048576).toFixed(1)} MB`
+  if (loading) return <div className="p-8 text-gray-400">Loading...</div>
+  if (!tx) return <div className="p-8 text-gray-400">Transaction not found</div>
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-8 max-w-5xl">
       <div className="flex items-center gap-3 mb-8">
-        <Link href="/dashboard/transactions" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft className="w-4 h-4 text-gray-500" />
-        </Link>
+        <Link href="/dashboard/transactions" className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-4 h-4 text-brand-500" /></Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-gray-900">{tx.property_address}</h1>
@@ -111,52 +86,11 @@ export default function TransactionDetailPage() {
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="card p-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Home className="w-4 h-4 text-brand-500" /> Property Details</h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Address</span><span className="text-gray-900 font-medium">{tx.property_address}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-900 font-medium capitalize">{tx.transaction_type}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Purchase price</span><span className="text-gray-900 font-medium">{fmtMoney(tx.purchase_price)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Close date</span><span className="text-gray-900 font-medium">{fmt(tx.closing_date)}</span></div>
-          </div>
-        </div>
-        <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-brand-500" /> Timeline</h2>
-          <form onSubmit={addNote} className="flex gap-2 mb-5">
-            <input type="text" className="input text-sm flex-1" placeholder="Add a note..." value={note} onChange={e => setNote(e.target.value)} />
-            <button type="submit" className="btn-primary px-4 py-2 text-sm" disabled={savingNote}>Add</button>
-          </form>
-          <div className="space-y-3">
-            {timeline.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No timeline events yet</p> : timeline.map((event) => (
-              <div key={event.id} className="flex gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-2 flex-shrink-0" />
-                <div><p className="text-sm text-gray-700">{event.content}</p><p className="text-xs text-gray-400 mt-0.5">{fmt(event.created_at)}</p></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="card p-6 mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2>
-          <label className="btn-primary px-4 py-2 text-sm cursor-pointer">
-            {uploading ? 'Uploading...' : 'Upload Document'}
-            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" disabled={uploading} />
-          </label>
-        </div>
-        <div className="space-y-2">
-          {documents.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No documents yet</p> : documents.map((doc: any) => (
-            <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-brand-500 flex-shrink-0" />
-                <span className="text-sm text-gray-700 font-medium">{doc.name}</span>
-              </div>
-              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">View</a>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+            ENDOFFILE
+
