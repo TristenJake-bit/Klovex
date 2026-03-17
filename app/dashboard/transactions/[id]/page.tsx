@@ -92,5 +92,85 @@ export default function TransactionDetailPage() {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Address</span><span className="text-gray-900 font-medium">{tx.property_address}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-900 font-medium capitalize">{tx.transaction_type}</span></div>
-            ENDOFFILE
-
+            <div className="flex justify-between"><span className="text-gray-500">Purchase price</span><span className="text-gray-900 font-medium">{fmtMoney(tx.purchase_price)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Close date</span><span className="text-gray-900 font-medium">{fmt(tx.closing_date)}</span></div>
+          </div>
+        </div>
+        <div className="card p-6">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-brand-500" /> Timeline</h2>
+          <form onSubmit={addNote} className="flex gap-2 mb-5">
+            <input type="text" className="input text-sm flex-1" placeholder="Add a note..." value={note} onChange={e => setNote(e.target.value)} />
+            <button type="submit" className="btn-primary px-4 py-2 text-sm" disabled={savingNote}>Add</button>
+          </form>
+          <div className="space-y-3">
+            {timeline.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No timeline events yet</p> : timeline.map((event: any) => (
+              <div key={event.id} className="flex gap-3"><div className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-2 flex-shrink-0" /><div><p className="text-sm text-gray-700">{event.content}</p><p className="text-xs text-gray-400 mt-0.5">{fmt(event.created_at)}</p></div></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">AI analysis runs automatically on upload</p></div>
+          <label className="btn-primary px-4 py-2 text-sm cursor-pointer flex items-center gap-2">
+            {uploading ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</> : <>Upload Document</>}
+            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" disabled={uploading} />
+          </label>
+        </div>
+        {documents.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400 font-medium">No documents yet</p>
+            <p className="text-xs text-gray-300 mt-1">Upload a document to get instant AI analysis</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {documents.map((doc: any) => {
+              const analysis = analyses[doc.id]; const isAnalyzing = analyzingDoc === doc.id; const isExpanded = expandedAnalysis === doc.id
+              return (
+                <div key={doc.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between p-4 bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center flex-shrink-0"><FileText className="w-4 h-4 text-brand-600" /></div>
+                      <div><p className="text-sm font-medium text-gray-900">{doc.name}</p><p className="text-xs text-gray-400">{doc.file_size ? fmtSize(doc.file_size) : ''} · {fmt(doc.created_at)}</p></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAnalyzing && <div className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full"><Loader2 className="w-3 h-3 animate-spin" />Analyzing with AI...</div>}
+                      {analysis && !isAnalyzing && <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full"><CheckCircle className="w-3 h-3" />Analysis Ready</div>}
+                      {!analysis && !isAnalyzing && <button onClick={() => analyzeDocument(doc.id, doc.url, doc.name)} className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors"><Brain className="w-3 h-3" />Analyze</button>}
+                      <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-brand-600 px-3 py-1.5 border border-gray-200 rounded-full transition-colors">View</a>
+                      {analysis && <button onClick={() => setExpandedAnalysis(isExpanded ? null : doc.id)} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors">{isExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}</button>}
+                    </div>
+                  </div>
+                  {isAnalyzing && <div className="p-8 text-center"><div className="inline-flex items-center gap-3 text-sm text-gray-500"><Brain className="w-5 h-5 text-brand-500 animate-pulse" /><span>Claude is reading and analyzing your document...</span></div><p className="text-xs text-gray-400 mt-2">Extracting parties, dates, contingencies, and risks</p></div>}
+                  {analysis && isExpanded && (
+                    <div className="p-5 space-y-5">
+                      <div className="flex gap-4">
+                        <div className="flex-1 bg-blue-50 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-2"><Brain className="w-4 h-4 text-blue-600" /><span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">AI Summary</span></div>
+                          <p className="text-sm text-gray-700 leading-relaxed">{analysis.summary}</p>
+                          <div className="mt-2 flex items-center gap-2"><span className="text-xs text-gray-500">Document type:</span><span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">{analysis.documentType}</span></div>
+                        </div>
+                        {analysis.completionScore !== undefined && <div className="w-28 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center"><div className="text-3xl font-bold text-gray-900">{analysis.completionScore}%</div><div className="text-xs text-gray-400 mt-1 text-center">Complete</div><div className="w-full bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-brand-500 h-1.5 rounded-full" style={{ width: `${analysis.completionScore}%` }} /></div></div>}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {analysis.parties && Object.values(analysis.parties).some((v: any) => v) && <div className="bg-gray-50 rounded-xl p-4"><div className="flex items-center gap-2 mb-3"><User className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Parties</span></div><div className="space-y-1.5">{Object.entries(analysis.parties).map(([key, val]: any) => val && <div key={key} className="flex justify-between text-xs"><span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span><span className="text-gray-700 font-medium text-right max-w-32 truncate">{val}</span></div>)}</div></div>}
+                        {analysis.keyTerms && Object.values(analysis.keyTerms).some((v: any) => v) && <div className="bg-gray-50 rounded-xl p-4"><div className="flex items-center gap-2 mb-3"><DollarSign className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Key Terms</span></div><div className="space-y-1.5">{Object.entries(analysis.keyTerms).map(([key, val]: any) => val && <div key={key} className="flex justify-between text-xs"><span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span><span className="text-gray-700 font-medium text-right max-w-32 truncate">{val}</span></div>)}</div></div>}
+                      </div>
+                      {analysis.actionItems && analysis.actionItems.length > 0 && <div><div className="flex items-center gap-2 mb-3"><TrendingUp className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Action Items</span></div><div className="space-y-2">{analysis.actionItems.map((item: any, i: number) => <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border text-xs ${PRIORITY_COLORS[item.priority] || 'bg-gray-50 border-gray-200'}`}><span className="font-semibold uppercase tracking-wide flex-shrink-0 mt-0.5">{item.priority}</span><span className="flex-1">{item.task}</span><span className="text-gray-400 flex-shrink-0 capitalize">{item.responsible}</span></div>)}</div></div>}
+                      <div className="grid grid-cols-2 gap-4">
+                        {analysis.criticalDates && analysis.criticalDates.length > 0 && <div><div className="flex items-center gap-2 mb-3"><Calendar className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Critical Dates</span></div><div className="space-y-2">{analysis.criticalDates.map((d: any, i: number) => <div key={i} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg text-xs"><span className="text-gray-600">{d.label}</span><div className="text-right"><div className="font-medium text-gray-900">{d.date}</div>{d.daysUntil !== null && d.daysUntil !== undefined && <div className={d.daysUntil < 7 ? 'text-red-500' : d.daysUntil < 14 ? 'text-yellow-500' : 'text-gray-400'}>{d.daysUntil === 0 ? 'Today' : d.daysUntil < 0 ? `${Math.abs(d.daysUntil)}d ago` : `${d.daysUntil}d away`}</div>}</div></div>)}</div></div>}
+                        {analysis.contingencies && analysis.contingencies.length > 0 && <div><div className="flex items-center gap-2 mb-3"><CheckCircle className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Contingencies</span></div><div className="space-y-2">{analysis.contingencies.map((c: any, i: number) => <div key={i} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg text-xs"><span className="text-gray-600">{c.name}</span><span className={`px-2 py-0.5 rounded-full font-medium capitalize ${c.status === 'satisfied' ? 'bg-green-100 text-green-700' : c.status === 'waived' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span></div>)}</div></div>}
+                      </div>
+                      {analysis.risks && analysis.risks.length > 0 && <div><div className="flex items-center gap-2 mb-3"><AlertTriangle className="w-3.5 h-3.5 text-orange-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Risks and Missing Items</span></div><div className="space-y-2">{analysis.risks.map((risk: any, i: number) => <div key={i} className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs"><span>{risk.severity === 'high' ? '🔴' : risk.severity === 'medium' ? '🟡' : '🟢'}</span><span className="text-gray-700">{risk.issue}</span></div>)}</div></div>}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
