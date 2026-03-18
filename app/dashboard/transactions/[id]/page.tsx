@@ -58,16 +58,12 @@ export default function TransactionDetailPage() {
       const data = await response.json()
       if (data.analysis) {
       setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
-      if (data.analysis.changes && data.analysis.changes.length > 0) {
-        // Fields were updated — reload page to show new values
-        window.location.reload()
-      } else {
-        const supabaseReload = createClient()
-        const { data: updatedTx } = await supabaseReload.from('transactions').select('*').eq('id', id).single()
-        if (updatedTx) setTx(updatedTx)
-        const { data: updatedTimeline } = await (supabaseReload as any).from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
-        if (updatedTimeline) setTimeline(updatedTimeline)
-      }
+      // Always reload tx and timeline after analysis
+      const supabaseReload = createClient()
+      const { data: updatedTx } = await supabaseReload.from('transactions').select('*').eq('id', id).single()
+      if (updatedTx) setTx(updatedTx)
+      const { data: updatedTimeline } = await (supabaseReload as any).from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
+      if (updatedTimeline) setTimeline(updatedTimeline)
     }
     } catch (err) { console.error('Analysis failed:', err) }
     setAnalyzingDoc(null)
