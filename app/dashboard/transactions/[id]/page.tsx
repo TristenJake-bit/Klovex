@@ -13,6 +13,9 @@ export default function TransactionDetailPage() {
   const [timeline, setTimeline] = useState<any[]>([]); const [documents, setDocuments] = useState<any[]>([])
   const [uploading, setUploading] = useState(false); const [analyses, setAnalyses] = useState<Record<string,any>>({})
   const [analyzingDoc, setAnalyzingDoc] = useState<string|null>(null); const [expandedAnalysis, setExpandedAnalysis] = useState<string|null>(null)
+  const [checklist, setChecklist] = useState<any[]>([])
+  const [checklistFilter, setChecklistFilter] = useState('all')
+  const [generatingChecklist, setGeneratingChecklist] = useState(false)
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
@@ -20,6 +23,7 @@ export default function TransactionDetailPage() {
       setDocuments(data || []); if (data) data.forEach((doc: any) => loadAnalysis(doc.id))
     })
     supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
+    ;(supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).then(({ data }: any) => { setChecklist(data || []) })
   }, [id])
   async function loadAnalysis(docId: string) {
     const supabase = createClient()
@@ -63,6 +67,35 @@ export default function TransactionDetailPage() {
     } catch (err) { console.error('Analysis failed:', err) }
     setAnalyzingDoc(null)
   }
+  async function generateChecklist() {
+    if (!tx) return
+    setGeneratingChecklist(true)
+    try {
+      await fetch('/api/generate-checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactionId: id,
+          acceptanceDate: tx.created_at,
+          closingDate: tx.closing_date,
+          propertyAddress: tx.property_address,
+          hasHOA: false,
+          yearBuilt: null,
+        })
+      })
+      const supabase = createClient()
+      const { data } = await (supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true })
+      setChecklist(data || [])
+    } catch(e) { console.error(e) }
+    setGeneratingChecklist(false)
+  }
+
+  async function toggleTask(taskId: string, completed: boolean) {
+    const supabase = createClient()
+    await (supabase as any).from('transaction_checklists').update({ completed, completed_at: completed ? new Date().toISOString() : null }).eq('id', taskId)
+    setChecklist(prev => prev.map(t => t.id === taskId ? { ...t, completed, completed_at: completed ? new Date().toISOString() : null } : t))
+  }
+
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
   const fmtMoney = (n: number) => n ? `$${n.toLocaleString()}` : '—'
   const fmtSize = (b: number) => b < 1048576 ? `${(b/1024).toFixed(0)} KB` : `${(b/1048576).toFixed(1)} MB`
@@ -185,6 +218,68 @@ export default function TransactionDetailPage() {
               )
             })}
           </div>
+        )}
+      </div>
+
+      {/* TC CHECKLIST */}
+      <div className="card p-6 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-brand-500" /> Transaction Checklist
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">California contract-to-close compliance</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {checklist.length > 0 && (
+              <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+                {checklist.filter(t => t.completed).length}/{checklist.length} complete
+              </div>
+            )}
+            <button onClick={generateChecklist} disabled={generatingChecklist} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
+              {generatingChecklist ? <><Loader2 className="w-3 h-3 animate-spin" />Generating...</> : checklist.length > 0 ? '↺ Regenerate' : '⚡ Generate Checklist'}
+            </button>
+          </div>
+        </div>
+
+        {checklist.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <CheckCircle className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400 font-medium">No checklist yet</p>
+            <p className="text-xs text-gray-300 mt-1">Click Generate Checklist to create a California-compliant task list</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {['all','Contract Received','Disclosures','Inspections','Loan & Appraisal','Title','Pre-Closing','Closing','Post-Closing'].map(f => (
+                <button key={f} onClick={() => setChecklistFilter(f)}
+                  className={`text-xs px-3 py-1.5 rounded-full transition-colors ${checklistFilter === f ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {f === 'all' ? 'All' : f}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-1">
+              {checklist.filter(t => checklistFilter === 'all' || t.phase === checklistFilter).map((task: any) => (
+                <div key={task.id} className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${task.completed ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+                  <input type="checkbox" checked={task.completed} onChange={e => toggleTask(task.id, e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded accent-brand-500 flex-shrink-0 cursor-pointer" />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>{task.task}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-gray-400">{task.phase}</span>
+                      <span className="text-xs font-medium text-brand-600">{task.responsible}</span>
+                      {task.due_date && (
+                        <span className={`text-xs ${new Date(task.due_date) < new Date() && !task.completed ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                          Due {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                      {task.category && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{task.category}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
