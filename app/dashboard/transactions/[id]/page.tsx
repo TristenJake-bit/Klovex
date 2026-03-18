@@ -59,11 +59,11 @@ export default function TransactionDetailPage() {
       if (data.analysis) {
       setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
       // Reload transaction to show updated fields
-      const supabase = (await import('@/lib/supabase')).createClient()
-      const { data: updatedTx } = await supabase.from('transactions').select('*').eq('id', id).single()
+      const supabaseReload = createClient()
+      const { data: updatedTx } = await supabaseReload.from('transactions').select('*').eq('id', id).single()
       if (updatedTx) setTx(updatedTx)
       // Reload timeline to show AI update log
-      const { data: updatedTimeline } = await (supabase as any).from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
+      const { data: updatedTimeline } = await (supabaseReload as any).from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
       if (updatedTimeline) setTimeline(updatedTimeline)
     }
     } catch (err) { console.error('Analysis failed:', err) }
