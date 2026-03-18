@@ -47,16 +47,25 @@ export default function TransactionDetailPage() {
     if (!uploadError) {
       const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
       const { data: docData } = await (supabase as any).from('documents').insert({ transaction_id: id, name: file.name, url: publicUrl, uploaded_by: user?.id, file_type: file.type, file_size: file.size }).select().single()
-      if (docData) { setDocuments((prev) => [docData, ...prev]); analyzeDocument(docData.id, publicUrl, file.name) }
+      if (docData) { setDocuments((prev) => [docData, ...prev]); analyzeDocument(docData.id, publicUrl, file.name, id) }
     }
     setUploading(false); e.target.value = ''
   }
-  async function analyzeDocument(docId: string, docUrl: string, docName: string) {
+  async function analyzeDocument(docId: string, docUrl: string, docName: string, txId?: string) {
     setAnalyzingDoc(docId); setExpandedAnalysis(docId)
     try {
-      const response = await fetch('/api/analyze-document', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: docId, documentUrl: docUrl, documentName: docName, transactionId: id }) })
+      const response = await fetch('/api/analyze-document', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: docId, documentUrl: docUrl, documentName: docName, transactionId: txId || id }) })
       const data = await response.json()
-      if (data.analysis) setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+      if (data.analysis) {
+      setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+      // Reload transaction to show updated fields
+      const supabase = (await import('@/lib/supabase')).createClient()
+      const { data: updatedTx } = await supabase.from('transactions').select('*').eq('id', id).single()
+      if (updatedTx) setTx(updatedTx)
+      // Reload timeline to show AI update log
+      const { data: updatedTimeline } = await (supabase as any).from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
+      if (updatedTimeline) setTimeline(updatedTimeline)
+    }
     } catch (err) { console.error('Analysis failed:', err) }
     setAnalyzingDoc(null)
   }
@@ -137,7 +146,7 @@ export default function TransactionDetailPage() {
                     <div className="flex items-center gap-2">
                       {isAnalyzing && <div className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full"><Loader2 className="w-3 h-3 animate-spin" />Analyzing with AI...</div>}
                       {analysis && !isAnalyzing && <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full"><CheckCircle className="w-3 h-3" />Analysis Ready</div>}
-                      {!analysis && !isAnalyzing && <button onClick={() => analyzeDocument(doc.id, doc.url, doc.name)} className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors"><Brain className="w-3 h-3" />Analyze</button>}
+                      {!analysis && !isAnalyzing && <button onClick={() => analyzeDocument(doc.id, doc.url, doc.name, id)} className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors"><Brain className="w-3 h-3" />Analyze</button>}
                       <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-brand-600 px-3 py-1.5 border border-gray-200 rounded-full transition-colors">View</a>
                       {analysis && <button onClick={() => setExpandedAnalysis(isExpanded ? null : doc.id)} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors">{isExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}</button>}
                     </div>
