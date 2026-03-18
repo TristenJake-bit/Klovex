@@ -43,14 +43,7 @@ export default function TransactionDetailPage() {
     if (data) setTimeline((t) => [data, ...t]); setNote(''); setSavingNote(false)
   }
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return
-    const alreadyExists = documents.some(d => d.name === file.name)
-    if (alreadyExists) {
-      if (!window.confirm(`"${file.name}" is already uploaded. Upload another copy?`)) {
-        e.target.value = ''; return
-      }
-    }
-    setUploading(true)
+    const file = e.target.files?.[0]; if (!file) return; setUploading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const filePath = `${id}/${Date.now()}_${file.name}`
@@ -68,13 +61,9 @@ export default function TransactionDetailPage() {
       const response = await fetch('/api/analyze-document', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: docId, documentUrl: docUrl, documentName: docName, transactionId: txId || id }) })
       const data = await response.json()
       if (data.analysis) {
-        setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
-        const supabase = createClient()
-        const { data: txData } = await supabase.from('transactions').select('*').eq('id', id).single()
-        if (txData) setTx(txData)
-        const { data: tlData } = await supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
-        if (tlData) setTimeline(tlData)
-      }
+      setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+      window.location.reload()
+    }
     } catch (err) { console.error('Analysis failed:', err) }
     setAnalyzingDoc(null)
   }
