@@ -36,7 +36,7 @@ export default async function ClientPortalPage() {
     )
   }
 
-  const tx = transactions[0]
+  const tx = (transactions as any[])[0]
   const stepIndex = STATUS_STEPS.indexOf(tx.status)
 
   const { data: documents } = await supabase.from('documents').select('*').eq('transaction_id', tx.id).order('created_at', { ascending: false })
