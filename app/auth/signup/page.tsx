@@ -22,7 +22,7 @@ export default function SignupPage() {
       options: { data: { full_name: form.fullName, company: form.company } },
     })
     if (error) { setError(error.message); setLoading(false); return }
-    router.push('/dashboard')
+    router.push('/dashboard/welcome')
   }
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
