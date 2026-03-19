@@ -19,7 +19,7 @@ const dmSerif = DM_Serif_Display({
 export const metadata: Metadata = {
   title: 'Klovex — AI-Powered Transaction Coordination',
   description: 'Real estate transaction coordination, handled by AI. From contract to close.',
-  icons: { icon: '/favicon.ico' },
+  icons: { icon: '/favicon.svg' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
