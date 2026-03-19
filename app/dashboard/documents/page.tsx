@@ -14,7 +14,7 @@ export default function DocumentsPage() {
     const supabase = createClient()
     supabase
       .from('documents')
-      .select('*, transactions(address)')
+      .select('*, transactions(property_address)')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         setDocuments(data || [])
@@ -55,12 +55,12 @@ export default function DocumentsPage() {
                 <div>
                   <p className="font-medium text-gray-900 text-sm">{doc.name}</p>
                   <p className="text-gray-400 text-xs mt-0.5">
-                    {doc.transactions?.address || 'No transaction'} · {formatDate(doc.created_at)}
+                    {doc.transactions?.property_address || 'No transaction'} · {formatDate(doc.created_at)}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <a href={doc.file_url} target="_blank" rel="noreferrer"
+                <a href={doc.url} target="_blank" rel="noreferrer"
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   <Download className="w-4 h-4" />
                 </a>
