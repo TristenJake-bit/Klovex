@@ -17,7 +17,7 @@ export default async function ClientPortalPage() {
   const { data: profile } = await (supabase as any).from('profiles').select('*').eq('id', session.user.id).single() as any
   if (profile?.role === 'admin') redirect('/dashboard')
 
-  const { data: transactions } = await supabase
+  const { data: transactions } = await (supabase as any)
     .from('transactions')
     .select('*')
     .eq('client_id', session.user.id)
