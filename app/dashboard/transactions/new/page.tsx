@@ -29,24 +29,31 @@ export default function NewTransactionPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Not logged in'); setLoading(false); return }
 
     const property_address = `${form.address}, ${form.city}, ${form.state} ${form.zip}`
 
-    const { data, error: err } = await (supabase as any).from('transactions').insert({
+    const transactionData = {
       property_address,
       transaction_type: form.transaction_type,
       status: form.status,
       purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
       closing_date: form.closing_date || null,
       notes: form.notes,
-      client_id: user.id,
-    }).select().single()
+    }
 
-    if (err) { setError(err.message); setLoading(false); return }
-    router.push(`/dashboard/transactions/${data.id}`)
+    const res = await fetch('/api/stripe/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyAddress: property_address, transactionData }),
+    })
+
+    const data = await res.json()
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      setError(data.error || 'Failed to create checkout session')
+      setLoading(false)
+    }
   }
 
   return (
@@ -138,7 +145,7 @@ export default function NewTransactionPage() {
 
         <div className="flex items-center gap-3 pb-8">
           <button type="submit" className="btn-primary px-8 py-3 text-base" disabled={loading}>
-            {loading ? 'Creating...' : 'Create transaction'}
+            {loading ? 'Redirecting to payment...' : 'Create transaction — $299'}
           </button>
           <Link href="/dashboard/transactions" className="btn-secondary px-6 py-3">Cancel</Link>
         </div>
