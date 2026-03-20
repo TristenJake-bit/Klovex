@@ -7,7 +7,7 @@ const STEPS = [
   {
     target: '[data-tour="dashboard"]',
     title: 'Your Command Center',
-    body: 'The dashboard shows everything that needs your attention — overdue tasks, upcoming deadlines, and closings this week. You'll always know what's on fire.',
+    body: 'The dashboard shows everything that needs your attention — overdue tasks, upcoming deadlines, and closings this week. You will always know what is on fire.',
     position: 'right'
   },
   {
