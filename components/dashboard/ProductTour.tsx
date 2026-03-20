@@ -12,14 +12,13 @@ export default function ProductTour() {
       if (localStorage.getItem(key)) return
 
       const { driver } = await import('driver.js')
-      
+
       const driverObj = driver({
         showProgress: true,
         animate: true,
         overlayOpacity: 0.6,
         smoothScroll: true,
         allowClose: true,
-
         onDestroyStarted: () => {
           localStorage.setItem(key, '1')
           driverObj.destroy()
@@ -28,8 +27,8 @@ export default function ProductTour() {
           {
             element: '[data-tour="dashboard"]',
             popover: {
-              title: '👋 Welcome to Klovex',
-              description: 'This is your command center. See overdue tasks, upcoming deadlines, and closings at a glance.',
+              title: 'Your Command Center',
+              description: 'See overdue tasks, upcoming deadlines, and closings at a glance. This is where your day starts.',
               side: 'right',
               align: 'start',
             }
@@ -37,8 +36,8 @@ export default function ProductTour() {
           {
             element: '[data-tour="transactions"]',
             popover: {
-              title: '📋 Transactions',
-              description: 'Every deal lives here. Click to see all your active transactions, documents, and checklists.',
+              title: 'Transactions',
+              description: 'Every deal lives here. Click to see all your active transactions, documents, and compliance checklists.',
               side: 'right',
               align: 'start',
             }
@@ -46,7 +45,7 @@ export default function ProductTour() {
           {
             element: '[data-tour="documents"]',
             popover: {
-              title: '📄 Documents',
+              title: 'Documents',
               description: 'All documents across all transactions in one place. Upload a contract and AI extracts key dates and risks instantly.',
               side: 'right',
               align: 'start',
@@ -55,8 +54,8 @@ export default function ProductTour() {
           {
             element: '[data-tour="billing"]',
             popover: {
-              title: '💳 Billing',
-              description: 'Track all invoices and payment history. Each transaction coordination is a one-time $299 fee.',
+              title: 'Billing',
+              description: 'Track all invoices and payment history. Each transaction is a one-time $299 coordination fee.',
               side: 'right',
               align: 'start',
             }
@@ -64,8 +63,8 @@ export default function ProductTour() {
           {
             element: '[data-tour="new-transaction"]',
             popover: {
-              title: '🚀 Start your first deal',
-              description: 'Click "New transaction" to create your first deal. Fill in the property details, pay the coordination fee, and Klovex handles the rest automatically.',
+              title: 'Start Your First Deal',
+              description: 'Click New Transaction to create your first deal. Fill in the property details, pay the fee, and Klovex handles everything automatically.',
               side: 'bottom',
               align: 'start',
             }
