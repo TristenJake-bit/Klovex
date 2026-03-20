@@ -1,6 +1,6 @@
 import { createServerClient2 } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
-import { CheckCircle, Zap } from "lucide-react"
+import { CheckCircle, Zap, Plus } from "lucide-react"
 
 export default async function PlansPage() {
   const supabase = await createServerClient2()
@@ -11,57 +11,70 @@ export default async function PlansPage() {
     {
       name: "Starter",
       price: "$299",
-      per: "per transaction",
-      description: "Pay only when you close a deal. No commitment.",
-      features: ["Full AI transaction coordination","California compliance checklist","Document AI analysis","Daily email notifications","Client portal access","Unlimited document uploads"],
+      per: "per month",
+      description: "Unlimited transactions at a flat monthly rate. Perfect for agents getting started.",
+      features: [
+        "Unlimited transactions included",
+        "Full AI transaction coordination",
+        "California compliance checklist",
+        "Document AI analysis",
+        "Daily email notifications",
+        "Unlimited document uploads",
+      ],
+      addOn: null,
       cta: "Get started",
-      href: "/dashboard/transactions/new",
+      href: "/dashboard/billing",
       featured: false,
       badge: "",
     },
     {
       name: "Growth",
       price: "$799",
-      per: "per month — up to 4 transactions",
-      description: "Best for active agents closing 2-4 deals a month.",
-      features: ["Everything in Starter","Up to 4 transactions included ($200/deal)","Priority support","Advanced AI document comparison","Custom branding on client portal","Monthly performance report"],
-      cta: "Contact us to upgrade",
-      href: "mailto:hello@klovex.app?subject=Growth Plan",
+      per: "per month",
+      description: "4 transactions included. Add more as you close — cheaper per deal than Starter.",
+      features: [
+        "4 transactions included (~$200/deal)",
+        "Additional transactions at $249 each",
+        "Everything in Starter",
+        "Priority support",
+        "Advanced AI document comparison",
+        "Monthly performance report",
+      ],
+      addOn: "$249 per additional transaction",
+      cta: "Upgrade to Growth",
+      href: "/dashboard/billing",
       featured: true,
       badge: "Most popular",
     },
     {
-      name: "Scale",
+      name: "Custom",
       price: "$1,499",
-      per: "per month — up to 15 transactions",
-      description: "For high-volume agents and small teams.",
-      features: ["Everything in Growth","Up to 15 transactions included ($100/deal)","Team access up to 3 seats","Dedicated account manager","Custom checklist templates","API access"],
-      cta: "Contact us to upgrade",
-      href: "mailto:hello@klovex.app?subject=Scale Plan",
+      per: "per month",
+      description: "For high-volume agents and brokerages. Admin-assigned. Let's build your plan.",
+      features: [
+        "10 transactions included (~$150/deal)",
+        "Additional transactions at $199 each",
+        "Everything in Growth",
+        "Dedicated account manager",
+        "Custom checklist templates",
+        "Team access & custom branding",
+      ],
+      addOn: "$199 per additional transaction",
+      cta: "Contact us",
+      href: "mailto:hello@klovex.app?subject=Custom Plan",
       featured: false,
-      badge: "",
-    },
-    {
-      name: "Brokerage",
-      price: "Custom",
-      per: "tailored to your volume",
-      description: "For brokerages and teams doing 15+ deals a month.",
-      features: ["Everything in Scale","Unlimited transactions","Unlimited seats","White-label option","Custom state compliance","Onboarding and training"],
-      cta: "Schedule a call",
-      href: "mailto:hello@klovex.app?subject=Brokerage Plan",
-      featured: false,
-      badge: "Enterprise",
+      badge: "High volume",
     },
   ]
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-8 max-w-5xl">
       <div className="mb-10">
         <h1 className="text-2xl font-semibold text-gray-900">Plans and Pricing</h1>
-        <p className="text-gray-400 text-sm mt-1">Simple, transparent pricing. No hidden fees.</p>
+        <p className="text-gray-400 text-sm mt-1">Simple, transparent pricing. All plans are monthly and cancel anytime.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-5 mb-8">
+      <div className="grid grid-cols-3 gap-5 mb-8">
         {plans.map((plan) => (
           <div key={plan.name} className={"card p-6 relative flex flex-col " + (plan.featured ? "ring-2 ring-brand-500" : "")}>
             {plan.badge && (
@@ -69,13 +82,15 @@ export default async function PlansPage() {
                 {plan.badge}
               </div>
             )}
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">{plan.name}</p>
-              <p className="text-3xl font-bold text-gray-900 mb-1">{plan.price}</p>
-              <p className="text-xs text-gray-400">{plan.per}</p>
-              <p className="text-sm text-gray-500 mt-2">{plan.description}</p>
+
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">{plan.name}</p>
+              <p className="text-3xl font-bold text-gray-900">{plan.price}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{plan.per}</p>
+              <p className="text-sm text-gray-500 mt-3 leading-relaxed">{plan.description}</p>
             </div>
-            <ul className="space-y-2.5 mb-6 flex-1">
+
+            <ul className="space-y-2.5 mb-5 flex-1">
               {plan.features.map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
                   <CheckCircle className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
@@ -83,7 +98,18 @@ export default async function PlansPage() {
                 </li>
               ))}
             </ul>
-            <a href={plan.href} className={"block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors " + (plan.featured ? "btn-primary" : "btn-secondary")}>
+
+            {plan.addOn && (
+              <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-5">
+                <Plus className="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
+                {plan.addOn}
+              </div>
+            )}
+
+            <a
+              href={plan.href}
+              className={"block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors " + (plan.featured ? "btn-primary" : "btn-secondary")}
+            >
               {plan.cta}
             </a>
           </div>
@@ -94,12 +120,12 @@ export default async function PlansPage() {
         <div className="flex items-center gap-3">
           <Zap className="w-5 h-5 text-brand-500" />
           <div>
-            <p className="text-sm font-semibold text-gray-900">Need a custom plan?</p>
-            <p className="text-xs text-gray-400">Doing more than 15 transactions a month? We will build a plan around your volume.</p>
+            <p className="text-sm font-semibold text-gray-900">Need the Custom plan?</p>
+            <p className="text-xs text-gray-400">High-volume agents and brokerages — reach out and we'll get you set up.</p>
           </div>
         </div>
         <a href="mailto:hello@klovex.app?subject=Custom Plan" className="btn-primary text-sm px-5 py-2 flex-shrink-0">
-          Talk to us
+          Contact us
         </a>
       </div>
     </div>
