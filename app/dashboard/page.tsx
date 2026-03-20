@@ -89,7 +89,7 @@ export default async function DashboardPage() {
           <p className="text-gray-400 text-sm mt-1">Here's what needs your attention today.</p>
         </div>
         {isAdmin && (
-          <Link href="/dashboard/transactions/new" className="btn-primary inline-flex items-center gap-2">
+          <Link href="/dashboard/transactions/new" data-tour="new-transaction" className="btn-primary inline-flex items-center gap-2">
             <Plus size={16} /> New transaction
           </Link>
         )}
