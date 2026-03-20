@@ -21,7 +21,7 @@ export default async function PlansPage() {
         "Daily email notifications",
         "Unlimited document uploads",
       ],
-      addOn: null,
+      addOn: null as string | null,
       cta: "Get started",
       href: "/dashboard/billing",
       featured: false,
@@ -41,7 +41,7 @@ export default async function PlansPage() {
         "Advanced AI document comparison",
         "Monthly performance report",
       ],
-      addOn: "$249 per additional transaction",
+      addOn: "$249 per additional transaction" as string | null,
       cta: "Upgrade to Growth",
       href: "/dashboard/billing",
       featured: true,
@@ -52,9 +52,9 @@ export default async function PlansPage() {
       name: "Custom",
       price: "Talk to us",
       per: "built around your volume",
-      description: "For high-volume agents and brokerages doing serious deal flow. Pricing and features tailored to you.",
-      features: [],
-      addOn: null,
+      description: "For high-volume agents and brokerages. Pricing and features tailored to you.",
+      features: [] as string[],
+      addOn: null as string | null,
       cta: "Book a call",
       href: "mailto:hello@klovex.app?subject=Custom Plan",
       featured: false,
@@ -71,54 +71,62 @@ export default async function PlansPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-5 mb-8">
-        {plans.map((plan) => (
-          <div key={plan.name} className={"card p-6 relative flex flex-col " + (plan.featured ? "ring-2 ring-brand-500" : "")}>
-            {plan.badge && (
-              <div className={"absolute -top-3 left-6 text-xs font-semibold px-3 py-1 rounded-full " + (plan.featured ? "bg-brand-500 text-white" : "bg-gray-900 text-white")}>
-                {plan.badge}
-              </div>
-            )}
+        {plans.map((plan) => {
+          const cardClass = plan.featured
+            ? "card p-6 relative flex flex-col ring-2 ring-brand-500"
+            : "card p-6 relative flex flex-col"
+          const badgeClass = plan.featured
+            ? "absolute -top-3 left-6 text-xs font-semibold px-3 py-1 rounded-full bg-brand-500 text-white"
+            : "absolute -top-3 left-6 text-xs font-semibold px-3 py-1 rounded-full bg-gray-900 text-white"
+          const ctaClass = plan.featured
+            ? "block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors btn-primary"
+            : "block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors btn-secondary"
+          return (
+            <div key={plan.name} className={cardClass}>
+              {plan.badge && (
+                <div className={badgeClass}>
+                  {plan.badge}
+                </div>
+              )}
 
-            <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">{plan.name}</p>
-              <p className="text-3xl font-bold text-gray-900">{plan.price}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{plan.per}</p>
-              <p className="text-sm text-gray-500 mt-3 leading-relaxed">{plan.description}</p>
+              <div className="mb-5">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">{plan.name}</p>
+                <p className="text-3xl font-bold text-gray-900">{plan.price}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{plan.per}</p>
+                <p className="text-sm text-gray-500 mt-3 leading-relaxed">{plan.description}</p>
+              </div>
+
+              {plan.locked ? (
+                <div className="flex-1 flex flex-col items-center justify-center py-8 mb-5 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                  <Lock className="w-6 h-6 text-gray-300 mb-3" />
+                  <p className="text-sm font-medium text-gray-400">Details revealed on call</p>
+                  <p className="text-xs text-gray-300 mt-1 text-center px-4">Tailored pricing and features built around your business</p>
+                </div>
+              ) : (
+                <>
+                  <ul className="space-y-2.5 mb-5 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {plan.addOn && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-5">
+                      <Plus className="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
+                      {plan.addOn}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <a href={plan.href} className={ctaClass}>
+                {plan.cta}
+              </a>
             </div>
-
-            {plan.locked ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-8 mb-5 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                <Lock className="w-6 h-6 text-gray-300 mb-3" />
-                <p className="text-sm font-medium text-gray-400">Details revealed on call</p>
-                <p className="text-xs text-gray-300 mt-1 text-center px-4">Tailored pricing and features built around your business</p>
-              </div>
-            ) : (
-              <>
-                <ul className="space-y-2.5 mb-5 flex-1">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
-                      <CheckCircle className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                {plan.addOn && (
-                  <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-5">
-                    <Plus className="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
-                    {plan.addOn}
-                  </div>
-                )}
-              </>
-            )}
-
-            
-              href={plan.href}
-              className={"block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors " + (plan.featured ? "btn-primary" : "btn-secondary")}
-            >
-              {plan.cta}
-            </a>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="card p-5 flex items-center justify-between">
