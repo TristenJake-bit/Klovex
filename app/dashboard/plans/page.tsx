@@ -32,7 +32,7 @@ export default async function PlansPage() {
       name: "Growth",
       price: "$799",
       per: "per month",
-      description: "4 transactions included. Add more as you close — cheaper per deal than Starter.",
+      description: "4 transactions included. Add more as you close, cheaper per deal than Starter.",
       features: [
         "4 transactions included (~$200/deal)",
         "Additional transactions at $249 each",
@@ -50,7 +50,7 @@ export default async function PlansPage() {
     },
     {
       name: "Custom",
-      price: "Let's talk",
+      price: "Talk to us",
       per: "built around your volume",
       description: "For high-volume agents and brokerages doing serious deal flow. Pricing and features tailored to you.",
       features: [],
@@ -126,7 +126,7 @@ export default async function PlansPage() {
           <Zap className="w-5 h-5 text-brand-500" />
           <div>
             <p className="text-sm font-semibold text-gray-900">Need the Custom plan?</p>
-            <p className="text-xs text-gray-400">High-volume agents and brokerages — reach out and we will get you set up.</p>
+            <p className="text-xs text-gray-400">High-volume agents and brokerages, reach out and we will get you set up.</p>
           </div>
         </div>
         <a href="mailto:hello@klovex.app?subject=Custom Plan" className="btn-primary text-sm px-5 py-2 flex-shrink-0">
