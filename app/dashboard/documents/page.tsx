@@ -12,14 +12,18 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase
-      .from('documents')
-      .select('*, transactions(property_address)')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setDocuments(data || [])
-        setLoading(false)
-      })
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('documents')
+        .select('*, transactions(property_address)')
+        .eq('uploaded_by', user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          setDocuments(data || [])
+          setLoading(false)
+        })
+    })
   }, [])
 
   return (
