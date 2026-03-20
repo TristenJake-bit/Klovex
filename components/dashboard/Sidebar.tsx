@@ -18,11 +18,11 @@ export default function Sidebar({ profile }: SidebarProps) {
 
   const isAdmin = profile?.role === 'admin'
 
-  const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/dashboard/transactions', icon: FileText, label: 'Transactions' },
-    { href: '/dashboard/documents', icon: FolderOpen, label: 'Documents' },
-    { href: '/dashboard/billing', icon: Receipt, label: 'Billing' },
+  const navItems: { href: string; icon: any; label: string; tour?: string }[] = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', tour: 'dashboard' },
+    { href: '/dashboard/transactions', icon: FileText, label: 'Transactions', tour: 'transactions' },
+    { href: '/dashboard/documents', icon: FolderOpen, label: 'Documents', tour: 'documents' },
+    { href: '/dashboard/billing', icon: Receipt, label: 'Billing', tour: 'billing' },
     ...(isAdmin ? [{ href: '/dashboard/clients', icon: Users, label: 'Clients' }] : [{ href: '/dashboard/portal', icon: Home, label: 'My Transaction' }]),
   ]
 
@@ -46,6 +46,7 @@ export default function Sidebar({ profile }: SidebarProps) {
             <Link
               key={href}
               href={href}
+              data-tour={({ href, icon: Icon, label, tour }: any) => tour}
               className={cn(
                 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                 active

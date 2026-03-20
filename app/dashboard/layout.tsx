@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerClient2 } from '@/lib/supabase-server'
 import Sidebar from '@/components/dashboard/Sidebar'
+import ProductTour from '@/components/dashboard/ProductTour'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerClient2()
@@ -17,6 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex h-screen bg-gray-50">
       <Sidebar profile={profile} />
       <main className="flex-1 overflow-y-auto">{children}</main>
+      <ProductTour />
     </div>
   )
 }
