@@ -119,7 +119,7 @@ export default async function PlansPage() {
 
             
               href={plan.href}
-              className={`block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors ${plan.featured ? 'btn-primary' : 'btn-secondary'}`}
+              className={plan.featured ? 'btn-primary block text-center py-2.5 rounded-lg text-sm font-semibold' : 'btn-secondary block text-center py-2.5 rounded-lg text-sm font-semibold'}
             >
               {plan.cta}
             </a>
