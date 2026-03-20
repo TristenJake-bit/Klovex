@@ -1,6 +1,6 @@
 import { createServerClient2 } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
-import { CheckCircle, Zap, Plus } from "lucide-react"
+import { CheckCircle, Zap, Plus, Lock } from "lucide-react"
 
 export default async function PlansPage() {
   const supabase = await createServerClient2()
@@ -26,6 +26,7 @@ export default async function PlansPage() {
       href: "/dashboard/billing",
       featured: false,
       badge: "",
+      locked: false,
     },
     {
       name: "Growth",
@@ -45,25 +46,20 @@ export default async function PlansPage() {
       href: "/dashboard/billing",
       featured: true,
       badge: "Most popular",
+      locked: false,
     },
     {
       name: "Custom",
-      price: "$1,499",
-      per: "per month",
-      description: "For high-volume agents and brokerages. Admin-assigned. Let's build your plan.",
-      features: [
-        "10 transactions included (~$150/deal)",
-        "Additional transactions at $199 each",
-        "Everything in Growth",
-        "Dedicated account manager",
-        "Custom checklist templates",
-        "Team access & custom branding",
-      ],
-      addOn: "$199 per additional transaction",
-      cta: "Contact us",
+      price: "Let's talk",
+      per: "built around your volume",
+      description: "For high-volume agents and brokerages doing serious deal flow. Pricing and features tailored to you.",
+      features: [],
+      addOn: null,
+      cta: "Book a call",
       href: "mailto:hello@klovex.app?subject=Custom Plan",
       featured: false,
       badge: "High volume",
+      locked: true,
     },
   ]
 
@@ -90,23 +86,32 @@ export default async function PlansPage() {
               <p className="text-sm text-gray-500 mt-3 leading-relaxed">{plan.description}</p>
             </div>
 
-            <ul className="space-y-2.5 mb-5 flex-1">
-              {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
-                  <CheckCircle className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            {plan.addOn && (
-              <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-5">
-                <Plus className="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
-                {plan.addOn}
+            {plan.locked ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-8 mb-5 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                <Lock className="w-6 h-6 text-gray-300 mb-3" />
+                <p className="text-sm font-medium text-gray-400">Details revealed on call</p>
+                <p className="text-xs text-gray-300 mt-1 text-center px-4">Tailored pricing and features built around your business</p>
               </div>
+            ) : (
+              <>
+                <ul className="space-y-2.5 mb-5 flex-1">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
+                      <CheckCircle className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {plan.addOn && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-5">
+                    <Plus className="w-3.5 h-3.5 text-brand-400 flex-shrink-0" />
+                    {plan.addOn}
+                  </div>
+                )}
+              </>
             )}
 
-            <a
+            
               href={plan.href}
               className={"block text-center py-2.5 rounded-lg text-sm font-semibold transition-colors " + (plan.featured ? "btn-primary" : "btn-secondary")}
             >
@@ -121,7 +126,7 @@ export default async function PlansPage() {
           <Zap className="w-5 h-5 text-brand-500" />
           <div>
             <p className="text-sm font-semibold text-gray-900">Need the Custom plan?</p>
-            <p className="text-xs text-gray-400">High-volume agents and brokerages — reach out and we'll get you set up.</p>
+            <p className="text-xs text-gray-400">High-volume agents and brokerages — reach out and we will get you set up.</p>
           </div>
         </div>
         <a href="mailto:hello@klovex.app?subject=Custom Plan" className="btn-primary text-sm px-5 py-2 flex-shrink-0">
