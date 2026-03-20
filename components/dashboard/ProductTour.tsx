@@ -19,10 +19,7 @@ export default function ProductTour() {
         overlayOpacity: 0.6,
         smoothScroll: true,
         allowClose: true,
-        doneBtnText: 'Get started!',
-        closeBtnText: 'Skip',
-        nextBtnText: 'Next →',
-        prevBtnText: '← Back',
+
         onDestroyStarted: () => {
           localStorage.setItem(key, '1')
           driverObj.destroy()
