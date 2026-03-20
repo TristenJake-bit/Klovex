@@ -44,6 +44,7 @@ export default function TransactionDetailPage() {
   }
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
+    // Prevent accidental duplicate uploads
     const alreadyExists = documents.some(d => d.name === file.name)
     if (alreadyExists) {
       if (!window.confirm(`"${file.name}" is already uploaded. Upload another copy?`)) {
@@ -69,9 +70,11 @@ export default function TransactionDetailPage() {
       const data = await response.json()
       if (data.analysis) {
         setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+        // Refresh transaction data in case AI auto-updated fields (no page reload needed)
         const supabase = createClient()
         const { data: txData } = await supabase.from('transactions').select('*').eq('id', id).single()
         if (txData) setTx(txData)
+        // Refresh timeline to show AI update log entries
         const { data: tlData } = await supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false })
         if (tlData) setTimeline(tlData)
       }
@@ -82,7 +85,7 @@ export default function TransactionDetailPage() {
     if (!tx) return
     setGeneratingChecklist(true)
     try {
-      await fetch('/api/generate-checklist', {
+      const res = await fetch('/api/generate-checklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -94,10 +97,16 @@ export default function TransactionDetailPage() {
           yearBuilt: null,
         })
       })
-      const supabase = createClient()
-      const { data } = await (supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true })
-      setChecklist(data || [])
-    } catch(e) { console.error(e) }
+      if (!res.ok) {
+        const errText = await res.text()
+        console.error('generate-checklist API error:', res.status, errText)
+      } else {
+        const supabase = createClient()
+        const { data, error } = await (supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true })
+        if (error) console.error('Checklist fetch error:', error)
+        setChecklist(data || [])
+      }
+    } catch(e) { console.error('generateChecklist failed:', e) }
     setGeneratingChecklist(false)
   }
 
