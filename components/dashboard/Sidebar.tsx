@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FileText, FolderOpen, Receipt, LogOut, Settings, Users, Home } from 'lucide-react'
+import { LayoutDashboard, FileText, FolderOpen, Receipt, LogOut, Settings, Users, Home, Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/types/database'
@@ -23,6 +23,7 @@ export default function Sidebar({ profile }: SidebarProps) {
     { href: '/dashboard/transactions', icon: FileText, label: 'Transactions', tour: 'transactions' },
     { href: '/dashboard/documents', icon: FolderOpen, label: 'Documents', tour: 'documents' },
     { href: '/dashboard/billing', icon: Receipt, label: 'Billing', tour: 'billing' },
+    { href: '/dashboard/plans', icon: Zap, label: 'Plans' },
     ...(isAdmin ? [{ href: '/dashboard/clients', icon: Users, label: 'Clients' }] : [{ href: '/dashboard/portal', icon: Home, label: 'My Transaction' }]),
   ]
 
