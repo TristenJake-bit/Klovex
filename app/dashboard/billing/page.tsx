@@ -27,7 +27,7 @@ export default async function BillingPage() {
       <p className="text-gray-400 text-sm mb-8">All invoices and payment history</p>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div data-tour="billing-stats" className="grid grid-cols-3 gap-4 mb-8">
         <div className="card p-5">
           <div className="text-xs text-gray-400 mb-1">Total invoiced</div>
           <div className="text-2xl font-medium">{formatCurrency(total)}</div>

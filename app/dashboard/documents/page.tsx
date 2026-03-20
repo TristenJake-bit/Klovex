@@ -45,7 +45,7 @@ export default function DocumentsPage() {
           <p className="text-gray-400 text-sm mt-1">Documents uploaded to transactions will appear here</p>
         </div>
       ) : (
-        <div className="card divide-y divide-gray-100">
+        <div data-tour="document-list" className="card divide-y divide-gray-100">
           {documents.map((doc) => (
             <div key={doc.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
               <div className="flex items-center gap-3">

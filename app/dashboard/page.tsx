@@ -96,7 +96,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div data-tour="stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="card p-5">
           <div className="text-xs text-gray-400 mb-1">Active transactions</div>
           <div className="text-2xl font-medium">{active.length}</div>
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-6 mb-6">
         {/* OVERDUE TASKS */}
         <div className="card">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+          <div data-tour="overdue" className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
             <AlertTriangle size={15} className="text-red-500" />
             <h2 className="font-medium text-sm">Overdue tasks</h2>
             {overdueTasks.length > 0 && <span className="ml-auto text-xs bg-red-100 text-red-600 font-medium px-2 py-0.5 rounded-full">{overdueTasks.length}</span>}
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
 
         {/* DUE THIS WEEK */}
         <div className="card">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+          <div data-tour="due-this-week" className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
             <Calendar size={15} className="text-orange-400" />
             <h2 className="font-medium text-sm">Due this week</h2>
             {upcomingTasks.length > 0 && <span className="ml-auto text-xs bg-orange-100 text-orange-600 font-medium px-2 py-0.5 rounded-full">{upcomingTasks.length}</span>}

@@ -33,7 +33,7 @@ export default async function TransactionsPage() {
         )}
       </div>
 
-      <div className="card divide-y divide-gray-100">
+      <div data-tour="transaction-list" className="card divide-y divide-gray-100">
         {!transactions?.length ? (
           <div className="px-6 py-16 text-center text-gray-400 text-sm">
             No transactions yet.

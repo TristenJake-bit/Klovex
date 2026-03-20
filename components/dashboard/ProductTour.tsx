@@ -2,79 +2,180 @@
 
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { usePathname, useRouter } from 'next/navigation'
+
+const TOUR_KEY = 'klovex_tour_v2'
+
+const PAGE_STEPS: Record<string, any[]> = {
+  '/dashboard': [
+    {
+      element: '[data-tour="dashboard"]',
+      popover: {
+        title: '🏠 Dashboard',
+        description: 'This is your home base. Every morning you will see exactly what needs attention — overdue tasks, deadlines this week, and deals closing soon. Nothing slips through.',
+        side: 'right', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="stats"]',
+      popover: {
+        title: '📊 At-a-glance stats',
+        description: 'See your active deals, how many are closing within 14 days, overdue tasks, and your revenue this month — all in one row.',
+        side: 'bottom', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="overdue"]',
+      popover: {
+        title: '🔴 Overdue tasks',
+        description: 'Any checklist task that has passed its due date appears here in red. Click any task to go directly to that transaction and resolve it.',
+        side: 'right', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="due-this-week"]',
+      popover: {
+        title: '📅 Due this week',
+        description: 'Tasks due in the next 7 days across all your active transactions. Stay ahead of deadlines before they become overdue.',
+        side: 'left', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="new-transaction"]',
+      popover: {
+        title: '➕ Start a new deal',
+        description: 'Ready to add a transaction? Click here. You will fill in the property details, pay the $299 coordination fee, and Klovex takes it from there. Next we will look at Transactions.',
+        side: 'bottom', align: 'start',
+      }
+    },
+  ],
+  '/dashboard/transactions': [
+    {
+      element: '[data-tour="transactions"]',
+      popover: {
+        title: '📋 Transactions',
+        description: 'Every deal you are coordinating lives here. Each card shows the property address, closing date, and current status.',
+        side: 'right', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="transaction-list"]',
+      popover: {
+        title: '🏡 Your active deals',
+        description: 'Click any transaction to open it. Inside you will find the full checklist, uploaded documents, AI analysis, and the timeline of everything that has happened.',
+        side: 'top', align: 'start',
+      }
+    },
+  ],
+  '/dashboard/documents': [
+    {
+      element: '[data-tour="documents"]',
+      popover: {
+        title: '📄 Documents',
+        description: 'Every document uploaded across all your transactions appears here. No hunting through individual deals.',
+        side: 'right', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="document-list"]',
+      popover: {
+        title: '🤖 AI-analyzed documents',
+        description: 'Each document has been read by AI. It extracted the parties, key dates, purchase price, contingencies, and risks automatically the moment it was uploaded.',
+        side: 'top', align: 'start',
+      }
+    },
+  ],
+  '/dashboard/billing': [
+    {
+      element: '[data-tour="billing"]',
+      popover: {
+        title: '💳 Billing',
+        description: 'Every payment is tracked here. Each transaction generates a $299 invoice that is marked paid automatically when checkout completes.',
+        side: 'right', align: 'start',
+      }
+    },
+    {
+      element: '[data-tour="billing-stats"]',
+      popover: {
+        title: '💰 Revenue tracking',
+        description: 'See your total invoiced, collected, and outstanding at a glance. Great for end-of-month reporting.',
+        side: 'bottom', align: 'start',
+      }
+    },
+  ],
+  '/dashboard/clients': [
+    {
+      element: '[data-tour="clients"]',
+      popover: {
+        title: '👥 Clients',
+        description: 'Every agent or buyer who has signed up appears here. See how many transactions they have and jump to their deals instantly.',
+        side: 'right', align: 'start',
+      }
+    },
+  ],
+}
+
+const PAGE_ORDER = [
+  '/dashboard',
+  '/dashboard/transactions',
+  '/dashboard/documents',
+  '/dashboard/billing',
+  '/dashboard/clients',
+]
 
 export default function ProductTour() {
+  const pathname = usePathname()
+  const router = useRouter()
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
-      const key = `klovex_tour_done_${user.id}`
-      if (localStorage.getItem(key)) return
+
+      const tourData = localStorage.getItem(TOUR_KEY)
+      const tour = tourData ? JSON.parse(tourData) : null
+
+      // Check if tour is done
+      if (tour?.done) return
+
+      // Check if this page has steps
+      const steps = PAGE_STEPS[pathname]
+      if (!steps) return
+
+      // Check if we should be on this page
+      const expectedPage = tour?.nextPage || '/dashboard'
+      if (pathname !== expectedPage) return
+
+      // Small delay to let page render
+      await new Promise(r => setTimeout(r, 600))
 
       const { driver } = await import('driver.js')
+
+      const currentPageIndex = PAGE_ORDER.indexOf(pathname)
+      const nextPage = PAGE_ORDER[currentPageIndex + 1] || null
 
       const driverObj = driver({
         showProgress: true,
         animate: true,
-        overlayOpacity: 0.6,
+        overlayOpacity: 0.55,
         smoothScroll: true,
         allowClose: true,
         onDestroyStarted: () => {
-          localStorage.setItem(key, '1')
-          driverObj.destroy()
+          if (nextPage) {
+            localStorage.setItem(TOUR_KEY, JSON.stringify({ nextPage, done: false }))
+            driverObj.destroy()
+            router.push(nextPage)
+          } else {
+            localStorage.setItem(TOUR_KEY, JSON.stringify({ done: true }))
+            driverObj.destroy()
+          }
         },
-        steps: [
-          {
-            element: '[data-tour="dashboard"]',
-            popover: {
-              title: 'Your Command Center',
-              description: 'See overdue tasks, upcoming deadlines, and closings at a glance. This is where your day starts.',
-              side: 'right',
-              align: 'start',
-            }
-          },
-          {
-            element: '[data-tour="transactions"]',
-            popover: {
-              title: 'Transactions',
-              description: 'Every deal lives here. Click to see all your active transactions, documents, and compliance checklists.',
-              side: 'right',
-              align: 'start',
-            }
-          },
-          {
-            element: '[data-tour="documents"]',
-            popover: {
-              title: 'Documents',
-              description: 'All documents across all transactions in one place. Upload a contract and AI extracts key dates and risks instantly.',
-              side: 'right',
-              align: 'start',
-            }
-          },
-          {
-            element: '[data-tour="billing"]',
-            popover: {
-              title: 'Billing',
-              description: 'Track all invoices and payment history. Each transaction is a one-time $299 coordination fee.',
-              side: 'right',
-              align: 'start',
-            }
-          },
-          {
-            element: '[data-tour="new-transaction"]',
-            popover: {
-              title: 'Start Your First Deal',
-              description: 'Click New Transaction to create your first deal. Fill in the property details, pay the fee, and Klovex handles everything automatically.',
-              side: 'bottom',
-              align: 'start',
-            }
-          },
-        ]
+        steps,
       })
 
       driverObj.drive()
     })
-  }, [])
+  }, [pathname])
 
   return null
 }
