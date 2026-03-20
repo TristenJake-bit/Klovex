@@ -1,7 +1,7 @@
 import { createServerClient2 } from "@/lib/supabase-server"
 import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowRight, Plus, FileText, Clock, AlertTriangle, CheckCircle, Calendar } from 'lucide-react'
+import { ArrowRight, Plus, FileText, Clock, AlertTriangle, CheckCircle, Calendar, Phone } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default async function DashboardPage() {
@@ -94,6 +94,25 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+
+      {/* HIGH VOLUME BANNER */}
+      {isAdmin && transactions.filter((t: any) => {
+        const thisMonth = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0)
+        return new Date(t.created_at) >= thisMonth
+      }).length >= 6 && (
+        <div className="mb-6 bg-brand-50 border border-brand-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Phone className="w-4 h-4 text-brand-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-brand-900">You are doing high volume — let's talk</p>
+              <p className="text-xs text-brand-600 mt-0.5">You have completed 6+ transactions this month. We offer custom plans with better per-deal pricing for teams and brokerages.</p>
+            </div>
+          </div>
+          <a href="mailto:hello@klovex.app?subject=Custom Plan Inquiry" className="btn-primary text-sm px-4 py-2 flex-shrink-0 whitespace-nowrap">
+            Contact us →
+          </a>
+        </div>
+      )}
 
       {/* STATS */}
       <div data-tour="stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
