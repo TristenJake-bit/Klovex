@@ -12,8 +12,7 @@ export default function ProductTour() {
       if (localStorage.getItem(key)) return
 
       const { driver } = await import('driver.js')
-      await import('driver.js/dist/driver.css')
-
+      
       const driverObj = driver({
         showProgress: true,
         animate: true,
