@@ -9,15 +9,20 @@ export async function POST(req: NextRequest) {
 
   const { propertyAddress, transactionData } = await req.json()
 
+  const { data: profile } = await supabase.from('profiles').select('plan').eq('id', session.user.id).single<any>()
+  const plan = profile?.plan || 'starter'
+  const amount = plan === 'growth' ? 24900 : plan === 'custom' ? 19900 : 29900
+  const planLabel = plan === 'growth' ? 'Growth Add-on' : plan === 'custom' ? 'Custom Add-on' : 'Klovex Transaction Coordination'
+
   const checkoutSession = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     mode: 'payment',
     line_items: [{
       price_data: {
         currency: 'usd',
-        unit_amount: 29900,
+        unit_amount: amount,
         product_data: {
-          name: 'Klovex Transaction Coordination',
+          name: planLabel,
           description: `AI-powered TC service for ${propertyAddress}`,
         },
       },
