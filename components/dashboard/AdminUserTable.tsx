@@ -20,7 +20,7 @@ export default function AdminUserTable({ users }: { users: any[] }) {
   async function updateUser(userId: string, field: 'plan' | 'transactions_used', value: string | number) {
     setSaving(userId + field)
     const supabase = createClient()
-    await supabase.from('profiles').update({ [field]: value }).eq('id', userId)
+    await (supabase as any).from('profiles').update({ [field]: value }).eq('id', userId)
     setLocalUsers(prev => prev.map(u => u.id === userId ? { ...u, [field]: value } : u))
     setSaving(null)
     setSaved(userId + field)
