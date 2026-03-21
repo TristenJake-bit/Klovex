@@ -7,9 +7,7 @@ import { cn } from '@/lib/utils'
 export default async function DashboardPage() {
   const supabase = await createServerClient2()
   const { data: { session } } = await supabase.auth.getSession()
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', session!.user.id).single<{
-    role: string; full_name: string; email: string; plan: string; transactions_used: number; plan_period_start: string
-  }>()
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', session!.user.id).single<any>()
   const isAdmin = profile?.role === 'admin'
 
   const txQuery = supabase.from('transactions').select('*, profiles(full_name, email)').order('created_at', { ascending: false })
