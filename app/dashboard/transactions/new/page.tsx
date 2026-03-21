@@ -1,26 +1,45 @@
 'use client'
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, DollarSign, FileText } from 'lucide-react'
+import { ArrowLeft, Home, DollarSign, FileText, Zap } from 'lucide-react'
 
 export default function NewTransactionPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [profile, setProfile] = useState<any>(null)
   const [form, setForm] = useState({
-    address: '',
-    city: '',
-    state: 'CA',
-    zip: '',
-    transaction_type: 'purchase',
-    status: 'active',
-    purchase_price: '',
-    closing_date: '',
-    notes: '',
+    address: '', city: '', state: 'CA', zip: '',
+    transaction_type: 'purchase', status: 'active',
+    purchase_price: '', closing_date: '', notes: '',
   })
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('plan, transactions_used, id').eq('id', user.id).single().then(({ data }) => {
+          setProfile(data)
+        })
+      }
+    })
+  }, [])
+
+  const plan = profile?.plan || 'starter'
+  const txUsed = profile?.transactions_used || 0
+  const planLimit = plan === 'growth' ? 4 : plan === 'custom' ? 10 : null
+  const hasIncluded = planLimit !== null && txUsed < planLimit
+  const addonPrice = plan === 'growth' ? 249 : plan === 'custom' ? 199 : 299
+
+  const buttonLabel = loading
+    ? (hasIncluded ? 'Creating transaction...' : 'Redirecting to payment...')
+    : hasIncluded
+      ? 'Create transaction — included (' + (txUsed + 1) + '/' + planLimit + ')'
+      : plan === 'starter'
+        ? 'Create transaction — $299'
+        : 'Create transaction — $' + addonPrice + ' add-on'
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -29,9 +48,7 @@ export default function NewTransactionPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-
-    const property_address = `${form.address}, ${form.city}, ${form.state} ${form.zip}`
-
+    const property_address = form.address + ', ' + form.city + ', ' + form.state + ' ' + form.zip
     const transactionData = {
       property_address,
       transaction_type: form.transaction_type,
@@ -41,19 +58,23 @@ export default function NewTransactionPage() {
       notes: form.notes,
     }
 
+    if (hasIncluded) {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: tx, error: txError } = await (supabase as any).from('transactions').insert({ ...transactionData, client_id: user?.id }).select().single()
+      if (txError || !tx) { setError('Failed to create transaction. Please try again.'); setLoading(false); return }
+      await (supabase as any).from('profiles').update({ transactions_used: txUsed + 1 }).eq('id', user?.id)
+      router.push('/dashboard/transactions/' + tx.id + '?created=true&used=' + (txUsed + 1) + '&limit=' + planLimit)
+      return
+    }
+
     const res = await fetch('/api/stripe/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ propertyAddress: property_address, transactionData }),
     })
-
     const data = await res.json()
-    if (data.url) {
-      window.location.href = data.url
-    } else {
-      setError(data.error || 'Failed to create checkout session')
-      setLoading(false)
-    }
+    if (data.url) { window.location.href = data.url } else { setError(data.error || 'Failed to create checkout session'); setLoading(false) }
   }
 
   return (
@@ -67,6 +88,29 @@ export default function NewTransactionPage() {
           <p className="text-gray-500 text-sm mt-0.5">Fill in the property details</p>
         </div>
       </div>
+
+      {profile && (
+        <div className="mb-6 flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+          <Zap className="w-4 h-4 text-brand-500 flex-shrink-0" />
+          {planLimit !== null ? (
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-700">
+                {hasIncluded
+                  ? (planLimit - txUsed) + ' transaction' + (planLimit - txUsed !== 1 ? 's' : '') + ' remaining on your ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan'
+                  : 'All ' + planLimit + ' included transactions used — this will be billed at $' + addonPrice}
+              </p>
+              <div className="flex items-center gap-1 mt-2">
+                {Array.from({ length: planLimit }).map((_, i) => (
+                  <div key={i} className={'h-1.5 flex-1 rounded-full ' + (i < txUsed ? 'bg-brand-500' : 'bg-gray-200')} />
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">{txUsed} of {planLimit} used this month</p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">Unlimited transactions on your Starter plan — $299 per transaction</p>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="card p-6">
@@ -117,7 +161,7 @@ export default function NewTransactionPage() {
 
         <div className="card p-6">
           <h2 className="font-semibold text-gray-900 mb-5 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-brand-500" /> Financials & Timeline
+            <DollarSign className="w-4 h-4 text-brand-500" /> Financials and Timeline
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -144,8 +188,8 @@ export default function NewTransactionPage() {
         {error && <div className="text-red-500 text-sm bg-red-50 border border-red-100 rounded-lg px-4 py-3">{error}</div>}
 
         <div className="flex items-center gap-3 pb-8">
-          <button type="submit" className="btn-primary px-8 py-3 text-base" disabled={loading}>
-            {loading ? 'Redirecting to payment...' : 'Create transaction — $299'}
+          <button type="submit" className="btn-primary px-8 py-3 text-base" disabled={loading || !profile}>
+            {buttonLabel}
           </button>
           <Link href="/dashboard/transactions" className="btn-secondary px-6 py-3">Cancel</Link>
         </div>
