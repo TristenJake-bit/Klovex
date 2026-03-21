@@ -10,17 +10,17 @@ export default async function DashboardPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', session!.user.id).single<any>()
   const isAdmin = profile?.role === 'admin'
 
-  const txQuery = supabase.from('transactions').select('*, profiles(full_name, email)').order('created_at', { ascending: false })
-  if (!isAdmin) txQuery.eq('client_id', session!.user.id)
-  const { data: transactionsRaw } = await txQuery
-  const transactions = (transactionsRaw as any[]) || []
-  const active = transactions.filter(t => !['closed', 'cancelled'].includes(t.status))
-
   const plan = profile?.plan || 'starter'
   const txUsed = profile?.transactions_used || 0
   const planLimit = plan === 'growth' ? 4 : plan === 'custom' ? 10 : null
   const planLabel = plan === 'starter' ? 'Starter' : plan === 'growth' ? 'Growth' : 'Custom'
   const addonPrice = plan === 'growth' ? 249 : plan === 'custom' ? 199 : 299
+
+  const txQuery = supabase.from('transactions').select('*, profiles(full_name, email)').order('created_at', { ascending: false })
+  if (!isAdmin) txQuery.eq('client_id', session!.user.id)
+  const { data: transactionsRaw } = await txQuery
+  const transactions = (transactionsRaw as any[]) || []
+  const active = transactions.filter(t => !['closed', 'cancelled'].includes(t.status))
 
   const activeIds = active.map(t => t.id)
   let overdueTasks: any[] = []
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0]} 👋</h1>
+          <h1 className="text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0] || 'there'} </h1>
           <p className="text-gray-400 text-sm mt-1">Here is what needs your attention today.</p>
         </div>
         <Link href="/dashboard/transactions/new" data-tour="new-transaction" className="btn-primary inline-flex items-center gap-2">
@@ -106,7 +106,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {isAdmin && transactions.filter((t: any) => { const m = new Date(); m.setDate(1); m.setHours(0,0,0,0); return new Date(t.created_at) >= m }).length >= 6 && plan === 'starter' && (
+      {isAdmin && plan === 'starter' && transactions.filter((t: any) => { const m = new Date(); m.setDate(1); m.setHours(0,0,0,0); return new Date(t.created_at) >= m }).length >= 6 && (
         <div className="mb-6 bg-brand-50 border border-brand-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Phone className="w-4 h-4 text-brand-600 flex-shrink-0" />
@@ -153,7 +153,6 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-
         <div className="card">
           <div data-tour="due-this-week" className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
             <Calendar size={15} className="text-orange-400" />
@@ -200,7 +199,6 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-
         <div className="card">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2"><FileText size={15} className="text-brand-500" /><h2 className="font-medium text-sm">Recent transactions</h2></div>
