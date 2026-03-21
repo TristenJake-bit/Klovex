@@ -6,10 +6,10 @@ import { Users, ArrowRight, FileText } from 'lucide-react'
 
 export default async function ClientsPage() {
   const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/auth/login')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single() as any
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single() as any
   if (profile?.role !== 'admin') redirect('/dashboard')
 
   const { data: clients } = await supabase
