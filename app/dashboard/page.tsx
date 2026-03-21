@@ -64,7 +64,7 @@ export default async function DashboardPage() {
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0]} ????</h1>
+          <h1 className="text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0]} 👋</h1>
           <p className="text-gray-400 text-sm mt-1">Here is what needs your attention today.</p>
         </div>
         <Link href="/dashboard/transactions/new" data-tour="new-transaction" className="btn-primary inline-flex items-center gap-2">
