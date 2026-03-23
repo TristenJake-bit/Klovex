@@ -122,28 +122,28 @@ export default function TransactionDetailPage() {
   if (loading) return <div className="p-8 text-gray-400">Loading...</div>
   if (!tx) return <div className="p-8 text-gray-400">Transaction not found</div>
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="p-4 md:p-8 max-w-5xl">
+      <div className="flex items-center gap-3 mb-5 md:mb-8">
         <Link href="/dashboard/transactions" className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-4 h-4 text-brand-500" /></Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-gray-900">{tx.property_address}</h1>
+            <h1 className="text-lg md:text-2xl font-semibold text-gray-900 leading-tight">{tx.property_address}</h1>
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[tx.status] || 'bg-gray-100 text-gray-600'}`}>{tx.status}</span>
           </div>
           <p className="text-gray-500 text-sm mt-0.5 capitalize">{tx.transaction_type} · Created {fmt(tx.created_at)}</p>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="card p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
-        <div className="card p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
-        <div className="card p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Status</p>
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+        <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
+        <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
+        <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Status</p>
           <select className="text-sm font-medium bg-transparent border-0 p-0 text-gray-900 cursor-pointer focus:outline-none w-full" value={tx.status} onChange={e => handleStatusChange(e.target.value)}>
             <option value="pending">Pending</option><option value="contract">Contract</option><option value="inspection">Inspection</option><option value="closed">Closed</option><option value="cancelled">Cancelled</option>
           </select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="card p-6">
+        <div className="card p-4 md:p-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Home className="w-4 h-4 text-brand-500" /> Property Details</h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Address</span><span className="text-gray-900 font-medium">{tx.property_address}</span></div>
@@ -152,7 +152,7 @@ export default function TransactionDetailPage() {
             <div className="flex justify-between"><span className="text-gray-500">Close date</span><span className="text-gray-900 font-medium">{fmt(tx.closing_date)}</span></div>
           </div>
         </div>
-        <div className="card p-6">
+        <div className="card p-4 md:p-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-brand-500" /> Timeline</h2>
           <form onSubmit={addNote} className="flex gap-2 mb-5">
             <input type="text" className="input text-sm flex-1" placeholder="Add a note..." value={note} onChange={e => setNote(e.target.value)} />
@@ -165,7 +165,7 @@ export default function TransactionDetailPage() {
           </div>
         </div>
       </div>
-      <div className="card p-6">
+      <div className="card p-4 md:p-6">
         <div className="flex items-center justify-between mb-6">
           <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">AI analysis runs automatically on upload</p></div>
           <label className="btn-primary px-4 py-2 text-sm cursor-pointer flex items-center gap-2">
