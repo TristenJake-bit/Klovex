@@ -59,8 +59,8 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-8 max-w-6xl">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
           <h1 className="text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0] || 'there'} </h1>
           <p className="text-gray-400 text-sm mt-1">Here is what needs your attention today.</p>
@@ -119,7 +119,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div data-tour="stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div data-tour="stats" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Active transactions</div><div className="text-2xl font-medium">{active.length}</div></div>
         <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Closing within 14 days</div><div className={cn("text-2xl font-medium", closingSoon.length > 0 ? "text-orange-500" : "")}>{closingSoon.length}</div></div>
         <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Overdue tasks</div><div className={cn("text-2xl font-medium", overdueTasks.length > 0 ? "text-red-500" : "")}>{overdueTasks.length}</div></div>
@@ -130,7 +130,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
         <div className="card">
           <div data-tour="overdue" className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
             <AlertTriangle size={15} className="text-red-500" />
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div className="card">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
             <Clock size={15} className="text-brand-500" />
