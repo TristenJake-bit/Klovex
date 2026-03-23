@@ -62,16 +62,16 @@ export default async function DashboardPage() {
     <div className="p-4 md:p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
-          <h1 className="text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0] || 'there'} </h1>
+          <h1 className="text-lg md:text-2xl font-medium">{greeting}, {profile?.full_name?.split(' ')[0] || 'there'} </h1>
           <p className="text-gray-400 text-sm mt-1">Here is what needs your attention today.</p>
         </div>
-        <Link href="/dashboard/transactions/new" data-tour="new-transaction" className="btn-primary inline-flex items-center gap-2">
+        <Link href="/dashboard/transactions/new" data-tour="new-transaction" className="btn-primary inline-flex items-center gap-1.5 text-sm px-3 py-2 md:px-4 md:py-2 md:text-base whitespace-nowrap">
           <Plus size={16} /> New transaction
         </Link>
       </div>
 
-      <div className="mb-6 card p-5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
             <Zap className="w-4 h-4 text-brand-500" />
           </div>
@@ -91,10 +91,10 @@ export default async function DashboardPage() {
           </div>
         </div>
         {planLimit !== null ? (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               {Array.from({ length: planLimit }).map((_, i) => (
-                <div key={i} className={cn("w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold border", i < txUsed ? "bg-brand-500 border-brand-500 text-white" : "bg-gray-50 border-gray-200 text-gray-300")}>
+                <div key={i} className={cn("w-5 h-5 md:w-6 md:h-6 rounded-md md:rounded-lg flex items-center justify-center text-xs font-bold border", i < txUsed ? "bg-brand-500 border-brand-500 text-white" : "bg-gray-50 border-gray-200 text-gray-300")}>
                   {i + 1}
                 </div>
               ))}
@@ -120,13 +120,13 @@ export default async function DashboardPage() {
       )}
 
       <div data-tour="stats" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-        <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Active transactions</div><div className="text-2xl font-medium">{active.length}</div></div>
-        <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Closing within 14 days</div><div className={cn("text-2xl font-medium", closingSoon.length > 0 ? "text-orange-500" : "")}>{closingSoon.length}</div></div>
-        <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Overdue tasks</div><div className={cn("text-2xl font-medium", overdueTasks.length > 0 ? "text-red-500" : "")}>{overdueTasks.length}</div></div>
+        <div className="card p-4 md:p-5"><div className="text-xs text-gray-400 mb-1">Active transactions</div><div className="text-2xl font-medium">{active.length}</div></div>
+        <div className="card p-4 md:p-5"><div className="text-xs text-gray-400 mb-1">Closing within 14 days</div><div className={cn("text-xl md:text-2xl font-medium", closingSoon.length > 0 ? "text-orange-500" : "")}>{closingSoon.length}</div></div>
+        <div className="card p-4 md:p-5"><div className="text-xs text-gray-400 mb-1">Overdue tasks</div><div className={cn("text-xl md:text-2xl font-medium", overdueTasks.length > 0 ? "text-red-500" : "")}>{overdueTasks.length}</div></div>
         {isAdmin ? (
-          <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Revenue this month</div><div className="text-2xl font-medium text-brand-500">{formatCurrency(revenueThisMonth)}</div></div>
+          <div className="card p-4 md:p-5"><div className="text-xs text-gray-400 mb-1">Revenue this month</div><div className="text-2xl font-medium text-brand-500">{formatCurrency(revenueThisMonth)}</div></div>
         ) : (
-          <div className="card p-5"><div className="text-xs text-gray-400 mb-1">Total transactions</div><div className="text-2xl font-medium">{transactions.length}</div></div>
+          <div className="card p-4 md:p-5"><div className="text-xs text-gray-400 mb-1">Total transactions</div><div className="text-2xl font-medium">{transactions.length}</div></div>
         )}
       </div>
 
