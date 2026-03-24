@@ -54,7 +54,7 @@ export default function TransactionDetailPage() {
     setUploading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const filePath = `${id}/${Date.now()}_${file.name}`
+    const filePath = `${id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name}`
     const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file)
     if (!uploadError) {
       const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
