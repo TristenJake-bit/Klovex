@@ -83,6 +83,68 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Auto-generate checklist if transaction exists and no checklist yet
+    if (transactionId) {
+      const { data: existingChecklist } = await (supabase as any)
+        .from('transaction_checklists')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .limit(1)
+
+      if (!existingChecklist || existingChecklist.length === 0) {
+        const { data: txData } = await (supabase as any)
+          .from('transactions')
+          .select('*')
+          .eq('id', transactionId)
+          .single()
+
+        if (txData) {
+          await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://klovex.app'}/api/generate-checklist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': req.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              transactionId,
+              acceptanceDate: txData.created_at,
+              closingDate: txData.closing_date,
+              propertyAddress: txData.property_address,
+              transactionType: txData.transaction_type,
+              hasHOA: false,
+              yearBuilt: analysis.keyTerms?.yearBuilt || null,
+              isSeptic: false,
+            })
+          })
+        }
+      }
+
+      // Auto-mark tasks complete based on document type
+      if (analysis.documentType) {
+        const docTypeToTasks: Record<string, string[]> = {
+          'Purchase Agreement': ['Review Purchase Agreement (RPA) for completeness and all signatures', 'Verify all pages initialed and dated correctly', 'Send Residential Purchase Agreement (RPA) copy to all parties'],
+          'Natural Hazard Disclosure': ['Natural Hazard Disclosure (NHD) — order report, copy escrow', 'Send NHD Report and signature receipt noting Hazard Disclosure Receipt'],
+          'Transfer Disclosure Statement': ['Transfer Disclosure Statement (TDS) — seller to complete and deliver to buyer within 7 days'],
+          'Seller Property Questionnaire': ['Seller Property Questionnaire (SPQ) — seller to complete'],
+          'Preliminary Title Report': ['Preliminary Title Report ordered', 'Preliminary Title Report received and reviewed'],
+          'Home Inspection Report': ['Home inspection completed', 'Review inspection report and prepare Request for Repair (RR) if needed'],
+          'Termite Report': ['Pest/Termite inspection ordered', 'Termite inspection report received and reviewed'],
+          'Home Warranty': ['Home warranty included/ordered — check with agent', 'Verify home warranty was ordered'],
+          'Buyer Representation Agreement': ['Buyer Representation Agreement (BRBC/PSRA) — verify on file'],
+          'Lead Paint Disclosure': ['Lead-Based Paint Disclosure (LPD) — MANDATORY for homes built before 1978'],
+          'HOA Documents': ['HOA Documents — CC&Rs, Bylaws, Rules, Budget, Reserve Study'],
+          'Closing Disclosure': ['Closing Disclosure (CD) issued to buyer — 3 business day waiting period'],
+          'Settlement Statement': ['Upload final Settlement Statement to transaction file'],
+        }
+
+        const matchingTasks = docTypeToTasks[analysis.documentType] || []
+        if (matchingTasks.length > 0) {
+          await (supabase as any)
+            .from('transaction_checklists')
+            .update({ completed: true, completed_at: new Date().toISOString() })
+            .eq('transaction_id', transactionId)
+            .in('task', matchingTasks)
+        }
+      }
+    }
+
     return NextResponse.json({ analysis })
   } catch (error: any) {
     console.error('Analysis error:', error)
