@@ -200,6 +200,38 @@ export async function POST(req: NextRequest) {
           })
 
           await (supabase as any).from('transaction_checklists').insert(tasksWithDates)
+
+          // Now auto-complete tasks based on document type
+          const docTypeToTasks: Record<string, string[]> = {
+            'Purchase Agreement': [
+              'Review Purchase Agreement (RPA) for completeness and all signatures',
+              'Verify all pages initialed and dated correctly',
+              'Open escrow — send signed RPA and commission instructions to title company',
+            ],
+            'Natural Hazard Disclosure': [
+              'Natural Hazard Disclosure (NHD) — order report, copy escrow',
+              'Send NHD Report and signature receipt noting Hazard Disclosure Receipt',
+            ],
+            'Transfer Disclosure Statement': ['Transfer Disclosure Statement (TDS) — seller to complete and deliver to buyer within 7 days'],
+            'Seller Property Questionnaire': ['Seller Property Questionnaire (SPQ) — seller to complete'],
+            'Preliminary Title Report': ['Preliminary Title Report ordered', 'Preliminary Title Report received and reviewed'],
+            'Home Inspection Report': ['Home inspection completed', 'Review inspection report and prepare Request for Repair (RR) if needed'],
+            'Termite Report': ['Pest/Termite inspection ordered', 'Termite inspection report received and reviewed'],
+            'Home Warranty': ['Home warranty included/ordered — check with agent', 'Verify home warranty was ordered'],
+            'Buyer Representation Agreement': ['Buyer Representation Agreement (BRBC/PSRA) — verify on file'],
+            'Lead Paint Disclosure': ['Lead-Based Paint Disclosure (LPD) — MANDATORY for homes built before 1978'],
+            'Closing Disclosure': ['Closing Disclosure (CD) issued to buyer — 3 business day waiting period'],
+            'Settlement Statement': ['Upload final Settlement Statement to transaction file'],
+          }
+
+          const matchingTasks = docTypeToTasks[analysis.documentType] || []
+          if (matchingTasks.length > 0) {
+            await (supabase as any)
+              .from('transaction_checklists')
+              .update({ completed: true, completed_at: new Date().toISOString() })
+              .eq('transaction_id', transactionId)
+              .in('task', matchingTasks)
+          }
         }
       }
 

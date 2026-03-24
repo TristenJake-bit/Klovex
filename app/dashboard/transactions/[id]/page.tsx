@@ -23,7 +23,7 @@ export default function TransactionDetailPage() {
       setDocuments(data || []); if (data) data.forEach((doc: any) => loadAnalysis(doc.id))
     })
     supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
-    ;(supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).then(({ data }: any) => { setChecklist(data || []) })
+    ;(supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).order('phase', { ascending: true }).then(({ data }: any) => { setChecklist(data || []) })
   }, [id])
   async function loadAnalysis(docId: string) {
     const supabase = createClient()
@@ -104,7 +104,7 @@ export default function TransactionDetailPage() {
         console.error('generate-checklist API error:', res.status, errText)
       } else {
         const supabase = createClient()
-        const { data, error } = await (supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true })
+        const { data, error } = await (supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).order('phase', { ascending: true })
         if (error) console.error('Checklist fetch error:', error)
         setChecklist(data || [])
       }
