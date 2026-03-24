@@ -99,20 +99,107 @@ export async function POST(req: NextRequest) {
           .single()
 
         if (txData) {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://klovex.app'}/api/generate-checklist`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Cookie': req.headers.get('cookie') || '' },
-            body: JSON.stringify({
-              transactionId,
-              acceptanceDate: txData.created_at,
-              closingDate: txData.closing_date,
-              propertyAddress: txData.property_address,
-              transactionType: txData.transaction_type,
-              hasHOA: false,
-              yearBuilt: analysis.keyTerms?.yearBuilt || null,
-              isSeptic: false,
-            })
+          const acceptance = new Date(txData.created_at)
+          const closing = txData.closing_date ? new Date(txData.closing_date) : new Date(acceptance.getTime() + 30 * 24 * 60 * 60 * 1000)
+          const isSeller = txData.transaction_type === 'sale'
+
+          function daysFrom(days: number): string {
+            const d = new Date(acceptance)
+            d.setDate(d.getDate() + days)
+            return d.toISOString().split('T')[0]
+          }
+
+          function closingOffset(days: number): string {
+            const d = new Date(closing)
+            d.setDate(d.getDate() + days)
+            return d.toISOString().split('T')[0]
+          }
+
+          const baseTasks = [
+            { phase: 'Contract Received', task: 'Review Purchase Agreement (RPA) for completeness and all signatures', responsible: 'TC', days_from_acceptance: 1, category: 'Contract Review', required: true },
+            { phase: 'Contract Received', task: 'Verify all pages initialed and dated correctly', responsible: 'TC', days_from_acceptance: 1, category: 'Contract Review', required: true },
+            { phase: 'Contract Received', task: 'Calculate all contingency deadlines and enter into calendar — copy agents', responsible: 'TC', days_from_acceptance: 1, category: 'Deadlines', required: true },
+            { phase: 'Contract Received', task: 'Send Transaction Team Welcome Letter to all parties', responsible: 'TC', days_from_acceptance: 1, category: 'Communication', required: true },
+            { phase: 'Contract Received', task: 'Open escrow — send signed RPA and commission instructions to title company', responsible: 'TC', days_from_acceptance: 1, category: 'Escrow', required: true },
+            { phase: 'Contract Received', task: 'Confirm earnest money deposit deadline with buyer agent', responsible: 'TC', days_from_acceptance: 1, category: 'Finance', required: true },
+            { phase: 'Contract Received', task: 'Verify earnest money deposit received by escrow', responsible: 'TC', days_from_acceptance: 3, category: 'Finance', required: true },
+            { phase: 'Contract Received', task: 'Obtain copy of EMD receipt from escrow', responsible: 'TC', days_from_acceptance: 3, category: 'Finance', required: true },
+            { phase: 'Contract Received', task: 'Confirm lender has copy of executed contract', responsible: 'TC', days_from_acceptance: 2, category: 'Finance', required: true },
+            { phase: 'Disclosures', task: 'Natural Hazard Disclosure (NHD) — order report, copy escrow', responsible: 'TC', days_from_acceptance: 3, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Agent Visual Inspection Disclosure (AVID) — both agents to complete', responsible: 'Both Agents', days_from_acceptance: 7, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Statewide Buyer and Seller Advisory (SBSA) — deliver to buyer', responsible: 'Buyer Agent', days_from_acceptance: 3, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Market Conditions Advisory (MCA) — deliver to buyer', responsible: 'Buyer Agent', days_from_acceptance: 3, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Smoke Detector and Water Heater Compliance statement', responsible: 'Seller', days_from_acceptance: 7, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Start disclosures in GLIDE', responsible: 'TC', days_from_acceptance: 1, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Send NHD Report and signature receipt noting Hazard Disclosure Receipt', responsible: 'TC', days_from_acceptance: 5, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Send preliminary title report to all parties', responsible: 'TC', days_from_acceptance: 7, category: 'Title', required: true },
+            { phase: 'Inspections', task: 'Schedule home inspection — within inspection contingency period', responsible: 'Buyer Agent', days_from_acceptance: 3, category: 'Inspection', required: true },
+            { phase: 'Inspections', task: 'Home inspection completed', responsible: 'Buyer', days_from_acceptance: 10, category: 'Inspection', required: true },
+            { phase: 'Inspections', task: 'Pest/Termite inspection ordered', responsible: 'TC', days_from_acceptance: 3, category: 'Inspection', required: true },
+            { phase: 'Inspections', task: 'Termite inspection report received and reviewed', responsible: 'TC', days_from_acceptance: 10, category: 'Inspection', required: true },
+            { phase: 'Inspections', task: 'Review inspection report and prepare Request for Repair (RR) if needed', responsible: 'Buyer Agent', days_from_acceptance: 12, category: 'Inspection', required: true },
+            { phase: 'Inspections', task: 'Inspection contingency removal or cancellation signed', responsible: 'Buyer Agent', days_from_acceptance: 17, category: 'Contingency', required: true },
+            { phase: 'Title', task: 'Preliminary Title Report ordered', responsible: 'TC', days_from_acceptance: 3, category: 'Title', required: true },
+            { phase: 'Title', task: 'Preliminary Title Report received and reviewed', responsible: 'TC', days_from_acceptance: 7, category: 'Title', required: true },
+            { phase: 'Title', task: 'Confirm no unexpected liens, encumbrances, or clouds on title', responsible: 'TC', days_from_acceptance: 7, category: 'Title', required: true },
+            { phase: 'Title', task: 'Title contingency removal signed by buyer', responsible: 'Buyer Agent', days_from_acceptance: 10, category: 'Contingency', required: true },
+            { phase: 'Title', task: 'Confirm vesting instructions received by escrow', responsible: 'TC', days_from_acceptance: 14, category: 'Title', required: true },
+            { phase: 'Pre-Closing', task: 'Confirm all contingencies have been removed in writing', responsible: 'TC', days_from_acceptance: 22, category: 'Contingency', required: true },
+            { phase: 'Pre-Closing', task: 'Confirm wire instructions with escrow officer via phone', responsible: 'TC', days_from_acceptance: -3, category: 'Finance', required: true },
+            { phase: 'Pre-Closing', task: 'Schedule buyer signing appointment with escrow/notary', responsible: 'TC', days_from_acceptance: -3, category: 'Signing', required: true },
+            { phase: 'Pre-Closing', task: 'Schedule seller signing appointment with escrow/notary', responsible: 'TC', days_from_acceptance: -3, category: 'Signing', required: true },
+            { phase: 'Pre-Closing', task: 'Final walkthrough scheduled with buyer', responsible: 'Buyer Agent', days_from_acceptance: -1, category: 'Inspection', required: true },
+            { phase: 'Pre-Closing', task: 'Remind buyer and seller to submit change of address 1 week before moving', responsible: 'TC', days_from_acceptance: -7, category: 'Communication', required: true },
+            { phase: 'Closing', task: 'Confirm loan funded by lender', responsible: 'TC', days_from_acceptance: 0, category: 'Finance', required: true },
+            { phase: 'Closing', task: 'Confirm deed recorded with county recorder', responsible: 'TC', days_from_acceptance: 0, category: 'Title', required: true },
+            { phase: 'Closing', task: 'Confirm keys transferred to buyer', responsible: 'Listing Agent', days_from_acceptance: 0, category: 'Possession', required: true },
+            { phase: 'Closing', task: 'Send closing confirmation to all parties', responsible: 'TC', days_from_acceptance: 0, category: 'Communication', required: true },
+            { phase: 'Closing', task: 'Send TC Invoice to Escrow', responsible: 'TC', days_from_acceptance: 0, category: 'Finance', required: true },
+            { phase: 'Post-Closing', task: 'Upload final Settlement Statement to transaction file', responsible: 'TC', days_from_acceptance: 1, category: 'Documents', required: true },
+            { phase: 'Post-Closing', task: 'Confirm all documents uploaded and file is complete', responsible: 'TC', days_from_acceptance: 3, category: 'Documents', required: true },
+            { phase: 'Post-Closing', task: 'Submit complete transaction file to broker for review', responsible: 'TC', days_from_acceptance: 3, category: 'Compliance', required: true },
+          ]
+
+          const sellerExtra = [
+            { phase: 'Contract Received', task: 'Change MLS status to Pending', responsible: 'Listing Agent', days_from_acceptance: 1, category: 'MLS', required: true },
+            { phase: 'Contract Received', task: 'Send Seller Congratulations Letter — escrow info with RPA and all deadlines', responsible: 'TC', days_from_acceptance: 1, category: 'Communication', required: true },
+            { phase: 'Disclosures', task: 'Transfer Disclosure Statement (TDS) — seller to complete and deliver to buyer within 7 days', responsible: 'Listing Agent', days_from_acceptance: 7, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Seller Property Questionnaire (SPQ) — seller to complete', responsible: 'Listing Agent', days_from_acceptance: 7, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Send Tips for a Smoother Home Inspection to seller', responsible: 'TC', days_from_acceptance: 5, category: 'Communication', required: true },
+            { phase: 'Disclosures', task: 'Receive buyer agent AVID — send to seller for signatures', responsible: 'TC', days_from_acceptance: 10, category: 'CA Required Disclosure', required: true },
+            { phase: 'Pre-Closing', task: 'Verify home warranty was ordered', responsible: 'TC', days_from_acceptance: -5, category: 'Admin', required: true },
+          ]
+
+          const buyerExtra = [
+            { phase: 'Contract Received', task: 'Send Buyer Welcome Letter — escrow info with fully executed contract', responsible: 'TC', days_from_acceptance: 1, category: 'Communication', required: true },
+            { phase: 'Contract Received', task: 'Instructions to buyer on getting deposit to escrow', responsible: 'TC', days_from_acceptance: 1, category: 'Finance', required: true },
+            { phase: 'Disclosures', task: 'Buyer Representation Agreement (BRBC/PSRA) — verify on file', responsible: 'Buyer Agent', days_from_acceptance: 1, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Prepare disclosures for buyer signatures — include AVID', responsible: 'TC', days_from_acceptance: 3, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Send disclosures for buyer signatures — within 7 days of acceptance', responsible: 'TC', days_from_acceptance: 7, category: 'CA Required Disclosure', required: true },
+            { phase: 'Disclosures', task: 'Receive all signed disclosures back from buyer', responsible: 'TC', days_from_acceptance: 10, category: 'CA Required Disclosure', required: true },
+            { phase: 'Loan & Appraisal', task: 'Confirm buyer submitted complete loan application', responsible: 'TC', days_from_acceptance: 3, category: 'Finance', required: true },
+            { phase: 'Loan & Appraisal', task: 'Appraisal ordered by lender', responsible: 'Lender', days_from_acceptance: 5, category: 'Appraisal', required: true },
+            { phase: 'Loan & Appraisal', task: 'Final loan approval (clear to close) received', responsible: 'Lender', days_from_acceptance: 21, category: 'Finance', required: true },
+            { phase: 'Loan & Appraisal', task: 'Loan contingency removal signed by buyer', responsible: 'Buyer Agent', days_from_acceptance: 21, category: 'Contingency', required: true },
+            { phase: 'Pre-Closing', task: 'Send Buyer 2nd Letter after contingency period', responsible: 'TC', days_from_acceptance: 18, category: 'Communication', required: true },
+            { phase: 'Pre-Closing', task: 'Have buyer start setting up utilities', responsible: 'TC', days_from_acceptance: -7, category: 'Communication', required: true },
+          ]
+
+          const allTasks = [...baseTasks, ...(isSeller ? sellerExtra : buyerExtra)]
+
+          const tasksWithDates = allTasks.map((t: any) => {
+            let due_date: string
+            if (t.days_from_acceptance <= 0) {
+              due_date = closingOffset(t.days_from_acceptance)
+            } else if (t.phase === 'Closing') {
+              due_date = closing.toISOString().split('T')[0]
+            } else {
+              due_date = daysFrom(t.days_from_acceptance)
+            }
+            return { ...t, transaction_id: transactionId, due_date, completed: false }
           })
+
+          await (supabase as any).from('transaction_checklists').insert(tasksWithDates)
         }
       }
 
