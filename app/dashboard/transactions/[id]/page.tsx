@@ -93,8 +93,10 @@ export default function TransactionDetailPage() {
           acceptanceDate: tx.created_at,
           closingDate: tx.closing_date,
           propertyAddress: tx.property_address,
+          transactionType: tx.transaction_type,
           hasHOA: false,
           yearBuilt: null,
+          isSeptic: false,
         })
       })
       if (!res.ok) {
