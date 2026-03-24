@@ -172,7 +172,7 @@ export default function TransactionDetailPage() {
           <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">AI analysis runs automatically on upload</p></div>
           <label className="btn-primary px-4 py-2 text-sm cursor-pointer flex items-center gap-2">
             {uploading ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</> : <>Upload Document</>}
-            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" disabled={uploading} />
+            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple disabled={uploading} />
           </label>
         </div>
         {documents.length === 0 ? (
