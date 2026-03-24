@@ -43,27 +43,36 @@ export default function TransactionDetailPage() {
     if (data) setTimeline((t) => [data, ...t]); setNote(''); setSavingNote(false)
   }
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return
-    // Prevent accidental duplicate uploads
-    const alreadyExists = documents.some(d => d.name === file.name)
-    if (alreadyExists) {
-      if (!window.confirm(`"${file.name}" is already uploaded. Upload another copy?`)) {
-        e.target.value = ''; return
-      }
-    }
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
     setUploading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const filePath = `${id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`
-    const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file)
-    if (!uploadError) {
-      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
-      const { data: docData } = await (supabase as any).from('documents').insert({ transaction_id: id, name: file.name, url: publicUrl, uploaded_by: user?.id, file_type: file.type, file_size: file.size }).select().single()
-      if (docData) { setDocuments((prev) => [docData, ...prev]); analyzeDocument(docData.id, publicUrl, file.name, id) }
+    for (const file of files) {
+      try {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const filePath = `${id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`
+        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file)
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
+          const { data: docData } = await (supabase as any).from('documents').insert({ transaction_id: id, name: file.name, url: publicUrl, uploaded_by: user?.id, file_type: file.type, file_size: file.size }).select().single()
+          if (docData) {
+            setDocuments((prev) => [docData, ...prev])
+            analyzeDocument(docData.id, publicUrl, file.name, id)
+          }
+        } else {
+          console.error('Upload error for', file.name, uploadError)
+        }
+      } catch (err) {
+        console.error('Failed to upload', file.name, err)
+      }
+      await new Promise(r => setTimeout(r, 300))
     }
-    setUploading(false); e.target.value = ''
+    setUploading(false)
+    e.target.value = ''
   }
+
+
   async function analyzeDocument(docId: string, docUrl: string, docName: string, txId?: string) {
     setAnalyzingDoc(docId); setExpandedAnalysis(docId)
     try {
