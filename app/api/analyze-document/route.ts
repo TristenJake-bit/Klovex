@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
+import { sendAgentAlert } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient2()
@@ -261,6 +262,32 @@ export async function POST(req: NextRequest) {
             .eq('transaction_id', transactionId)
             .in('task', matchingTasks)
         }
+      }
+    }
+
+    // Send agent notification if high risks or agent action items found
+    if (transactionId && analysis.risks && analysis.actionItems) {
+      const { data: agentProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', session.user.id)
+        .single<any>()
+
+      if (agentProfile?.email) {
+        const { data: txForEmail } = await (supabase as any)
+          .from('transactions')
+          .select('property_address')
+          .eq('id', transactionId)
+          .single()
+
+        await sendAgentAlert({
+          agentEmail: agentProfile.email,
+          agentName: agentProfile.full_name,
+          propertyAddress: txForEmail?.property_address || 'Unknown Property',
+          transactionId,
+          risks: analysis.risks || [],
+          actionItems: analysis.actionItems || [],
+        }).catch(err => console.error('Email send failed:', err))
       }
     }
 
