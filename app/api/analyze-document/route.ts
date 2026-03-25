@@ -265,8 +265,60 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Send agent notification if high risks or agent action items found
-    if (transactionId && analysis.risks && analysis.actionItems) {
+    // Log key findings to timeline
+    if (transactionId) {
+      const timelineEntries: { transaction_id: string; author_id: string; type: string; content: string }[] = []
+
+      // Summary timeline entry
+      if (analysis.summary) {
+        timelineEntries.push({
+          transaction_id: transactionId,
+          author_id: session.user.id,
+          type: 'ai_analysis',
+          content: `📄 AI analyzed "${fileName}" (${analysis.documentType || 'Document'}): ${analysis.summary}`
+        })
+      }
+
+      // High-severity risks
+      const highRisks = (analysis.risks || []).filter((r: any) => r.severity === 'high')
+      if (highRisks.length > 0) {
+        timelineEntries.push({
+          transaction_id: transactionId,
+          author_id: session.user.id,
+          type: 'ai_risk',
+          content: `🚨 AI found ${highRisks.length} high-risk item${highRisks.length > 1 ? 's' : ''}: ${highRisks.map((r: any) => r.issue).join(' · ')}`
+        })
+      }
+
+      // Urgent critical dates (within 14 days)
+      const urgentDates = (analysis.criticalDates || []).filter((d: any) => d.daysUntil != null && d.daysUntil <= 14)
+      if (urgentDates.length > 0) {
+        timelineEntries.push({
+          transaction_id: transactionId,
+          author_id: session.user.id,
+          type: 'ai_deadline',
+          content: `📅 Upcoming deadlines: ${urgentDates.map((d: any) => `${d.label} (${d.date}${d.daysUntil <= 0 ? ' — TODAY' : ` — ${d.daysUntil}d`})`).join(' · ')}`
+        })
+      }
+
+      // High-priority action items
+      const highActions = (analysis.actionItems || []).filter((a: any) => a.priority === 'high')
+      if (highActions.length > 0) {
+        timelineEntries.push({
+          transaction_id: transactionId,
+          author_id: session.user.id,
+          type: 'ai_action',
+          content: `⚡ ${highActions.length} high-priority action${highActions.length > 1 ? 's' : ''}: ${highActions.map((a: any) => a.task).join(' · ')}`
+        })
+      }
+
+      if (timelineEntries.length > 0) {
+        await (supabase as any).from('timeline_events').insert(timelineEntries)
+      }
+    }
+
+    // Send agent notification if findings warrant it
+    if (transactionId && (analysis.risks || analysis.actionItems || analysis.criticalDates)) {
       const { data: agentProfile } = await supabase
         .from('profiles')
         .select('email, full_name')
@@ -287,6 +339,8 @@ export async function POST(req: NextRequest) {
           transactionId,
           risks: analysis.risks || [],
           actionItems: analysis.actionItems || [],
+          summary: analysis.summary || undefined,
+          criticalDates: analysis.criticalDates || [],
         }).catch(err => console.error('Email send failed:', err))
       }
     }

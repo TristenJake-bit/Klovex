@@ -96,6 +96,8 @@ export async function sendAgentAlert({
   transactionId,
   risks,
   actionItems,
+  summary,
+  criticalDates,
 }: {
   agentEmail: string
   agentName: string
@@ -103,6 +105,8 @@ export async function sendAgentAlert({
   transactionId: string
   risks: { severity: string; issue: string }[]
   actionItems: { priority: string; task: string; responsible: string }[]
+  summary?: string
+  criticalDates?: { label: string; date: string; daysUntil: number }[]
 }) {
   const highRisks = risks.filter(r => r.severity === 'high')
   const agentActions = actionItems.filter(a =>
@@ -110,8 +114,9 @@ export async function sendAgentAlert({
     a.responsible?.toLowerCase().includes('listing') ||
     a.responsible?.toLowerCase().includes('buyer')
   )
+  const urgentDates = (criticalDates || []).filter(d => d.daysUntil != null && d.daysUntil <= 14)
 
-  if (highRisks.length === 0 && agentActions.length === 0) return
+  if (highRisks.length === 0 && agentActions.length === 0 && urgentDates.length === 0) return
 
   const riskRows = highRisks.map(r => `
     <tr>
@@ -145,6 +150,25 @@ export async function sendAgentAlert({
           <h2 style="color:#111827;font-size:22px;margin:0 0 24px;font-weight:600">${propertyAddress}</h2>
           <p style="color:#374151;font-size:15px;line-height:1.6">Hi ${agentName || 'there'},</p>
           <p style="color:#374151;font-size:15px;line-height:1.6">Klovex AI has reviewed the uploaded document and found items that require your attention.</p>
+          ${summary ? `
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px 20px;margin:24px 0">
+              <p style="color:#0369a1;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px">AI Summary</p>
+              <p style="color:#374151;font-size:14px;line-height:1.6;margin:0">${summary}</p>
+            </div>
+          ` : ''}
+          ${urgentDates.length > 0 ? `
+            <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:16px 20px;margin:24px 0">
+              <p style="color:#7e22ce;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Upcoming Deadlines</p>
+              <table style="width:100%;border-collapse:collapse">${urgentDates.map(d => `
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #f0f0f0">
+                    <span style="font-size:11px;font-weight:600;color:${d.daysUntil <= 3 ? '#ef4444' : d.daysUntil <= 7 ? '#f59e0b' : '#7e22ce'};margin-right:8px">${d.daysUntil <= 0 ? 'TODAY' : d.daysUntil + 'd'}</span>
+                    ${d.label} — ${d.date}
+                  </td>
+                </tr>
+              `).join('')}</table>
+            </div>
+          ` : ''}
           ${highRisks.length > 0 ? `
             <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:16px 20px;margin:24px 0">
               <p style="color:#dc2626;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">High Risk Items</p>

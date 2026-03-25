@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell } from 'lucide-react'
 const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
 const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
 export default function TransactionDetailPage() {
@@ -16,19 +16,35 @@ export default function TransactionDetailPage() {
   const [checklist, setChecklist] = useState<any[]>([])
   const [checklistFilter, setChecklistFilter] = useState('all')
   const [generatingChecklist, setGeneratingChecklist] = useState(false)
+  const [findingsAlert, setFindingsAlert] = useState<{ risks: any[]; criticalDates: any[]; actionItems: any[]; summary: string; documentType: string; docName: string } | null>(null)
+  const [alertDismissed, setAlertDismissed] = useState(false)
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
     supabase.from('documents').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => {
-      setDocuments(data || []); if (data) data.forEach((doc: any) => loadAnalysis(doc.id))
+      setDocuments(data || []); if (data) (data as any[]).forEach((doc: any) => loadAnalysis(doc.id, doc.name))
     })
     supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
     ;(supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).order('phase', { ascending: true }).then(({ data }: any) => { setChecklist(data || []) })
   }, [id])
-  async function loadAnalysis(docId: string) {
+  async function loadAnalysis(docId: string, docName?: string) {
     const supabase = createClient()
     const { data } = await (supabase as any).from('document_analyses').select('*').eq('document_id', docId).single()
-    if (data) setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+    if (data) {
+      setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+      // Show alert for most recent analysis with findings
+      const a = data.analysis
+      if (a && ((a.risks && a.risks.length > 0) || (a.criticalDates && a.criticalDates.length > 0) || (a.actionItems && a.actionItems.length > 0))) {
+        setFindingsAlert(prev => prev || {
+          risks: a.risks || [],
+          criticalDates: a.criticalDates || [],
+          actionItems: a.actionItems || [],
+          summary: a.summary || '',
+          documentType: a.documentType || 'Document',
+          docName: docName || 'Document',
+        })
+      }
+    }
   }
   async function handleStatusChange(status: string) {
     const supabase = createClient()
@@ -80,6 +96,20 @@ export default function TransactionDetailPage() {
       const data = await response.json()
       if (data.analysis) {
         setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
+        // Show findings alert banner
+        const a = data.analysis
+        const hasFindings = (a.risks && a.risks.length > 0) || (a.criticalDates && a.criticalDates.length > 0) || (a.actionItems && a.actionItems.length > 0)
+        if (hasFindings) {
+          setFindingsAlert({
+            risks: a.risks || [],
+            criticalDates: a.criticalDates || [],
+            actionItems: a.actionItems || [],
+            summary: a.summary || '',
+            documentType: a.documentType || 'Document',
+            docName: docName,
+          })
+          setAlertDismissed(false)
+        }
         // Refresh transaction data in case AI auto-updated fields (no page reload needed)
         const supabase = createClient()
         const { data: txData } = await supabase.from('transactions').select('*').eq('id', id).single()
@@ -145,6 +175,79 @@ export default function TransactionDetailPage() {
           <p className="text-gray-500 text-sm mt-0.5 capitalize">{tx.transaction_type} · Created {fmt(tx.created_at)}</p>
         </div>
       </div>
+      {/* AI Findings Alert Banner */}
+      {findingsAlert && !alertDismissed && (
+        <div className="mb-4 md:mb-6 rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-red-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-orange-100/60 border-b border-orange-200">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-orange-600" />
+              <span className="text-sm font-semibold text-orange-800">AI Findings — {findingsAlert.documentType}</span>
+              <span className="text-xs text-orange-600 bg-orange-200/60 px-2 py-0.5 rounded-full">{findingsAlert.docName}</span>
+            </div>
+            <button onClick={() => setAlertDismissed(true)} className="p-1 hover:bg-orange-200 rounded-lg transition-colors">
+              <X className="w-4 h-4 text-orange-500" />
+            </button>
+          </div>
+          <div className="p-4 space-y-3">
+            {findingsAlert.summary && (
+              <p className="text-sm text-gray-700 leading-relaxed">{findingsAlert.summary}</p>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {findingsAlert.risks.filter(r => r.severity === 'high' || r.severity === 'medium').length > 0 && (
+                <div className="bg-white/70 rounded-lg p-3 border border-red-100">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                    <span className="text-xs font-semibold text-red-700 uppercase">Risks</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {findingsAlert.risks.filter(r => r.severity === 'high' || r.severity === 'medium').map((r, i) => (
+                      <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                        <span className="flex-shrink-0 mt-0.5">{r.severity === 'high' ? '🔴' : '🟡'}</span>
+                        <span>{r.issue}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {findingsAlert.criticalDates.length > 0 && (
+                <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Calendar className="w-3.5 h-3.5 text-purple-500" />
+                    <span className="text-xs font-semibold text-purple-700 uppercase">Critical Dates</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {findingsAlert.criticalDates.map((d, i) => (
+                      <div key={i} className="text-xs text-gray-700 flex items-center justify-between">
+                        <span>{d.label}</span>
+                        <span className={`font-medium ${d.daysUntil != null && d.daysUntil <= 7 ? 'text-red-600' : d.daysUntil != null && d.daysUntil <= 14 ? 'text-yellow-600' : 'text-gray-500'}`}>
+                          {d.date}{d.daysUntil != null ? ` (${d.daysUntil <= 0 ? 'Today' : d.daysUntil + 'd'})` : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {findingsAlert.actionItems.filter(a => a.priority === 'high').length > 0 && (
+                <div className="bg-white/70 rounded-lg p-3 border border-amber-100">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-xs font-semibold text-amber-700 uppercase">Action Items</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {findingsAlert.actionItems.filter(a => a.priority === 'high').map((a, i) => (
+                      <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                        <span className="flex-shrink-0 text-red-500 font-bold mt-0.5">!</span>
+                        <span>{a.task}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
