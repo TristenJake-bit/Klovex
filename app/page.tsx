@@ -42,7 +42,7 @@ export default function HomePage() {
             <Link href="/auth/signup" className="btn-primary inline-flex items-center gap-2 text-base py-3 px-7">
               Start your first transaction <ArrowRight size={16} />
             </Link>
-            <span className="text-sm text-gray-400">First 2 deals free</span>
+            <span className="text-sm text-gray-400">AI-powered from day one</span>
           </div>
         </div>
 
@@ -195,10 +195,10 @@ export default function HomePage() {
             <h2 className="font-serif text-4xl text-white tracking-tight mb-2">
               Ready to close<br /><em className="text-brand-500">without the chaos?</em>
             </h2>
-            <p className="text-gray-400 font-light">Your first 2 transactions are on us. No credit card required.</p>
+            <p className="text-gray-400 font-light">Start managing transactions with AI today.</p>
           </div>
           <div className="flex gap-3 flex-shrink-0">
-            <Link href="/auth/signup" className="btn-primary py-3 px-8 text-base">Start for free</Link>
+            <Link href="/auth/signup" className="btn-primary py-3 px-8 text-base">Get started</Link>
             <a href="mailto:hello@klovex.io" className="btn-secondary py-3 px-8 text-base bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800">
               Book a demo
             </a>

@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell } from 'lucide-react'
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil } from 'lucide-react'
 const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
 const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
+const CONTACT_ROLES = ['Buyer', 'Seller', "Buyer's Agent", "Seller's Agent", 'Lender', 'Escrow Officer', 'Title Officer', 'Inspector', 'Appraiser', 'HOA']
 export default function TransactionDetailPage() {
   const params = useParams(); const id = params.id as string
   const [tx, setTx] = useState<any>(null); const [loading, setLoading] = useState(true)
@@ -18,6 +19,10 @@ export default function TransactionDetailPage() {
   const [generatingChecklist, setGeneratingChecklist] = useState(false)
   const [findingsAlert, setFindingsAlert] = useState<{ risks: any[]; criticalDates: any[]; actionItems: any[]; summary: string; documentType: string; docName: string } | null>(null)
   const [alertDismissed, setAlertDismissed] = useState(false)
+  const [contacts, setContacts] = useState<any[]>([])
+  const [showContactForm, setShowContactForm] = useState(false)
+  const [editingContact, setEditingContact] = useState<any>(null)
+  const [contactForm, setContactForm] = useState({ role: 'Buyer', name: '', email: '', phone: '', company: '' })
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
@@ -26,6 +31,7 @@ export default function TransactionDetailPage() {
     })
     supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
     ;(supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).order('phase', { ascending: true }).then(({ data }: any) => { setChecklist(data || []) })
+    ;(supabase as any).from('transaction_contacts').select('*').eq('transaction_id', id).order('created_at', { ascending: true }).then(({ data }: any) => { setContacts(data || []) })
   }, [id])
   async function loadAnalysis(docId: string, docName?: string) {
     const supabase = createClient()
@@ -150,6 +156,34 @@ export default function TransactionDetailPage() {
       }
     } catch(e) { console.error('generateChecklist failed:', e) }
     setGeneratingChecklist(false)
+  }
+
+  async function saveContact(e: React.FormEvent) {
+    e.preventDefault()
+    if (!contactForm.name.trim()) return
+    const supabase = createClient()
+    if (editingContact) {
+      const { data } = await (supabase as any).from('transaction_contacts').update({ role: contactForm.role, name: contactForm.name, email: contactForm.email || null, phone: contactForm.phone || null, company: contactForm.company || null }).eq('id', editingContact.id).select().single()
+      if (data) setContacts(prev => prev.map(c => c.id === editingContact.id ? data : c))
+    } else {
+      const { data } = await (supabase as any).from('transaction_contacts').insert({ transaction_id: id, role: contactForm.role, name: contactForm.name, email: contactForm.email || null, phone: contactForm.phone || null, company: contactForm.company || null }).select().single()
+      if (data) setContacts(prev => [...prev, data])
+    }
+    setContactForm({ role: 'Buyer', name: '', email: '', phone: '', company: '' })
+    setShowContactForm(false)
+    setEditingContact(null)
+  }
+
+  function startEditContact(contact: any) {
+    setContactForm({ role: contact.role, name: contact.name, email: contact.email || '', phone: contact.phone || '', company: contact.company || '' })
+    setEditingContact(contact)
+    setShowContactForm(true)
+  }
+
+  async function deleteContact(contactId: string) {
+    const supabase = createClient()
+    await (supabase as any).from('transaction_contacts').delete().eq('id', contactId)
+    setContacts(prev => prev.filter(c => c.id !== contactId))
   }
 
   async function toggleTask(taskId: string, completed: boolean) {
@@ -280,6 +314,72 @@ export default function TransactionDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Contacts / Parties */}
+      <div className="card p-4 md:p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Users className="w-4 h-4 text-brand-500" /> Transaction Contacts</h2>
+            <p className="text-xs text-gray-400 mt-0.5">All parties involved in this transaction</p>
+          </div>
+          <button onClick={() => { setEditingContact(null); setContactForm({ role: 'Buyer', name: '', email: '', phone: '', company: '' }); setShowContactForm(!showContactForm) }}
+            className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
+            <Plus className="w-3.5 h-3.5" /> Add Contact
+          </button>
+        </div>
+
+        {showContactForm && (
+          <form onSubmit={saveContact} className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+              <select className="input text-sm" value={contactForm.role} onChange={e => setContactForm(f => ({ ...f, role: e.target.value }))}>
+                {CONTACT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <input className="input text-sm" placeholder="Full name *" required value={contactForm.name} onChange={e => setContactForm(f => ({ ...f, name: e.target.value }))} />
+              <input className="input text-sm" placeholder="Company" value={contactForm.company} onChange={e => setContactForm(f => ({ ...f, company: e.target.value }))} />
+              <input className="input text-sm" type="email" placeholder="Email" value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))} />
+              <input className="input text-sm" type="tel" placeholder="Phone" value={contactForm.phone} onChange={e => setContactForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="btn-primary px-4 py-2 text-sm">{editingContact ? 'Update' : 'Save'}</button>
+              <button type="button" onClick={() => { setShowContactForm(false); setEditingContact(null) }} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+            </div>
+          </form>
+        )}
+
+        {contacts.length === 0 && !showContactForm ? (
+          <div className="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <Users className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400 font-medium">No contacts yet</p>
+            <p className="text-xs text-gray-300 mt-1">Add buyers, sellers, agents, lenders, and other parties</p>
+          </div>
+        ) : contacts.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {contacts.map((c: any) => (
+              <div key={c.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:border-brand-200 transition-colors group">
+                <div className="w-9 h-9 rounded-full bg-brand-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User className="w-4 h-4 text-brand-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900 truncate">{c.name}</span>
+                    <span className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full flex-shrink-0">{c.role}</span>
+                  </div>
+                  {c.company && <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Building2 className="w-3 h-3" />{c.company}</p>}
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {c.email && <a href={`mailto:${c.email}`} className="text-xs text-gray-500 hover:text-brand-600 flex items-center gap-1 truncate"><Mail className="w-3 h-3 flex-shrink-0" />{c.email}</a>}
+                    {c.phone && <a href={`tel:${c.phone}`} className="text-xs text-gray-500 hover:text-brand-600 flex items-center gap-1 flex-shrink-0"><Phone className="w-3 h-3" />{c.phone}</a>}
+                  </div>
+                </div>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                  <button onClick={() => startEditContact(c)} className="p-1.5 hover:bg-gray-100 rounded-lg"><Pencil className="w-3.5 h-3.5 text-gray-400" /></button>
+                  <button onClick={() => deleteContact(c.id)} className="p-1.5 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="card p-4 md:p-6">
         <div className="flex items-center justify-between mb-6">
           <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">AI analysis runs automatically on upload</p></div>
