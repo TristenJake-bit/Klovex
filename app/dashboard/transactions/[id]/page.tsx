@@ -291,6 +291,78 @@ export default function TransactionDetailPage() {
           </select>
         </div>
       </div>
+      {/* Deadline Dashboard */}
+      {checklist.length > 0 && (() => {
+        const totalTasks = checklist.length
+        const completedTasks = checklist.filter(t => t.completed).length
+        const pct = Math.round((completedTasks / totalTasks) * 100)
+        const incompleteTasks = checklist.filter(t => !t.completed && t.due_date).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+        const today = new Date(); today.setHours(0, 0, 0, 0)
+        function getDaysUntil(dateStr: string) {
+          const d = new Date(dateStr); d.setHours(0, 0, 0, 0)
+          return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        }
+        function getUrgency(days: number) {
+          if (days <= 0) return { color: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', label: days === 0 ? 'Due today' : `${Math.abs(days)}d overdue` }
+          if (days <= 3) return { color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500', label: `${days}d left` }
+          if (days <= 7) return { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500', label: `${days}d left` }
+          return { color: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500', label: `${days}d left` }
+        }
+        return (
+          <div className="card p-4 md:p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-brand-500" /> Deadline Dashboard
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Upcoming deadlines at a glance</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-900">{pct}%</span>
+                <div className="w-32 bg-gray-200 rounded-full h-2">
+                  <div className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-xs text-gray-500">{completedTasks}/{totalTasks} tasks</span>
+              </div>
+            </div>
+            {incompleteTasks.length === 0 ? (
+              <div className="text-center py-6 bg-green-50 rounded-xl border border-green-200">
+                <CheckCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />
+                <p className="text-sm text-green-700 font-medium">All dated tasks are complete!</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {incompleteTasks.slice(0, 10).map((task: any) => {
+                  const days = getDaysUntil(task.due_date)
+                  const urgency = getUrgency(days)
+                  return (
+                    <div key={task.id} className={`flex items-center gap-3 p-3 rounded-lg border ${urgency.color} transition-colors`}>
+                      <input type="checkbox" checked={false} onChange={() => toggleTask(task.id, true)}
+                        className="w-4 h-4 rounded accent-brand-500 flex-shrink-0 cursor-pointer" />
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${urgency.dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{task.task}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs opacity-75">{task.phase}</span>
+                          {task.responsible && <span className="text-xs opacity-75">· {task.responsible}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs font-semibold">{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs font-medium opacity-75">{urgency.label}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+                {incompleteTasks.length > 10 && (
+                  <p className="text-xs text-gray-400 text-center pt-2">+ {incompleteTasks.length - 10} more upcoming deadlines</p>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="card p-4 md:p-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Home className="w-4 h-4 text-brand-500" /> Property Details</h2>
