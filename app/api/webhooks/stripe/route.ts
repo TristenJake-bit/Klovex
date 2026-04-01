@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
+import { sendWelcomeEmail } from '@/lib/email-templates'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -58,6 +59,16 @@ export async function POST(req: NextRequest) {
         type: 'note',
         content: '💳 Payment received — transaction coordination activated',
       })
+
+      // Send welcome email
+      const { data: profile } = await supabase.from('profiles').select('email, full_name').eq('id', userId).single()
+      if (profile?.email) {
+        sendWelcomeEmail({
+          agentEmail: profile.email,
+          agentName: (profile as any).full_name || 'there',
+          transaction: newTx,
+        }).catch(err => console.error('Welcome email failed:', err))
+      }
     }
   }
 

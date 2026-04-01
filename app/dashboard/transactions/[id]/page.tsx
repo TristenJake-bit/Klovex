@@ -57,6 +57,10 @@ export default function TransactionDetailPage() {
     const supabase = createClient()
     await (supabase as any).from('transactions').update({ status }).eq('id', id)
     setTx((t: any) => ({ ...t, status }))
+    // Auto-send closing confirmation email
+    if (status === 'closing') {
+      fetch('/api/send-template-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: 'closing_confirmation', transactionId: id }) }).catch(() => {})
+    }
   }
   async function addNote(e: React.FormEvent) {
     e.preventDefault(); if (!note.trim()) return; setSavingNote(true)

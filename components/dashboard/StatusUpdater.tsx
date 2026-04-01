@@ -32,6 +32,11 @@ export default function StatusUpdater({ transactionId, currentStatus }: Props) {
       content: `Status updated to: ${STATUS_LABELS[newStatus]}`,
     })
 
+    // Auto-send closing confirmation email
+    if (newStatus === 'closing') {
+      fetch('/api/send-template-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: 'closing_confirmation', transactionId }) }).catch(() => {})
+    }
+
     setUpdating(false)
     router.refresh()
   }

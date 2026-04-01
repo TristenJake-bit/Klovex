@@ -64,6 +64,8 @@ export default function NewTransactionPage() {
       const { data: tx, error: txError } = await (supabase as any).from('transactions').insert({ ...transactionData, client_id: user?.id }).select().single()
       if (txError || !tx) { setError('Failed to create transaction. Please try again.'); setLoading(false); return }
       await (supabase as any).from('profiles').update({ transactions_used: txUsed + 1 }).eq('id', user?.id)
+      // Send welcome email
+      fetch('/api/send-template-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: 'welcome', transactionId: tx.id }) }).catch(() => {})
       router.push('/dashboard/transactions/' + tx.id + '?created=true&used=' + (txUsed + 1) + '&limit=' + planLimit)
       return
     }
