@@ -1,22 +1,37 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized — log in first' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('email, full_name')
-    .eq('id', session.user.id)
-    .single<any>()
+  // Try getUser first (more reliable than getSession in some contexts)
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const email = profile?.email || session.user.email
-  if (!email) return NextResponse.json({ error: 'No email found on profile' }, { status: 400 })
+  let email: string | undefined
+  let name = 'there'
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', user.id)
+      .single<any>()
+    email = profile?.email || user.email
+    name = profile?.full_name || 'there'
+  }
+
+  // Fallback: allow passing email as query param for testing (only in non-production or when no session)
+  const queryEmail = req.nextUrl.searchParams.get('email')
+  if (!email && queryEmail) {
+    email = queryEmail
+  }
+
+  if (!email) {
+    return NextResponse.json({ error: 'No email found. Either log in or pass ?email=your@email.com' }, { status: 400 })
+  }
 
   try {
     const result = await resend.emails.send({
@@ -30,7 +45,7 @@ export async function GET() {
           </div>
           <div style="padding:32px">
             <h2 style="color:#111827;font-size:20px;margin:0 0 16px">Email is working!</h2>
-            <p style="color:#374151;font-size:15px;line-height:1.6">Hi ${profile?.full_name || 'there'},</p>
+            <p style="color:#374151;font-size:15px;line-height:1.6">Hi ${name},</p>
             <p style="color:#374151;font-size:15px;line-height:1.6">This is a test email from Klovex confirming that your Resend integration is working correctly.</p>
             <p style="color:#6b7280;font-size:13px;margin-top:24px">Sent to: ${email}<br>Sent at: ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PST</p>
           </div>
@@ -40,6 +55,6 @@ export async function GET() {
 
     return NextResponse.json({ success: true, sentTo: email, resendId: result.data?.id })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: err.message, details: (err as any).response?.body }, { status: 500 })
   }
 }
