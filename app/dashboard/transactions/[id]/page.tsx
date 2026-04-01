@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil } from 'lucide-react'
-const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight } from 'lucide-react'
+const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', loan:'bg-indigo-100 text-indigo-700', closing:'bg-teal-100 text-teal-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
 const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
 const CONTACT_ROLES = ['Buyer', 'Seller', "Buyer's Agent", "Seller's Agent", 'Lender', 'Escrow Officer', 'Title Officer', 'Inspector', 'Appraiser', 'HOA']
 export default function TransactionDetailPage() {
@@ -300,12 +300,56 @@ export default function TransactionDetailPage() {
         </div>
       )}
 
+      {/* Status Auto-Progression Banner */}
+      {checklist.length > 0 && tx && (() => {
+        const phaseComplete = (phase: string) => {
+          const tasks = checklist.filter(t => t.phase === phase)
+          return tasks.length > 0 && tasks.every(t => t.completed)
+        }
+        const taskComplete = (taskName: string) => checklist.some(t => t.task.toLowerCase().includes(taskName.toLowerCase()) && t.completed)
+
+        let suggestion: { message: string; nextStatus: string; nextLabel: string } | null = null
+
+        if (tx.status === 'pending' && phaseComplete('Contract Received')) {
+          suggestion = { message: 'All Contract Received tasks are complete.', nextStatus: 'contract', nextLabel: 'Contract' }
+        } else if (tx.status === 'contract' && phaseComplete('Disclosures')) {
+          suggestion = { message: 'All Disclosures tasks are complete.', nextStatus: 'inspection', nextLabel: 'Inspection' }
+        } else if (tx.status === 'inspection' && (taskComplete('inspection contingency removal') || phaseComplete('Inspections'))) {
+          suggestion = { message: 'Inspection phase is complete.', nextStatus: 'loan', nextLabel: 'Loan & Appraisal' }
+        } else if ((tx.status === 'loan' || tx.status === 'inspection') && (taskComplete('clear to close') || taskComplete('final loan approval'))) {
+          suggestion = { message: 'Clear to close received.', nextStatus: 'closing', nextLabel: 'Closing' }
+        } else if (tx.status === 'closing' && phaseComplete('Closing')) {
+          suggestion = { message: 'All closing tasks are complete.', nextStatus: 'closed', nextLabel: 'Closed' }
+        }
+
+        if (!suggestion) return null
+        return (
+          <div className="mb-4 md:mb-6 rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-green-900">{suggestion.message}</p>
+                <p className="text-xs text-green-700 mt-0.5">Ready to advance to <strong>{suggestion.nextLabel}</strong> phase?</p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleStatusChange(suggestion!.nextStatus)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0"
+            >
+              Advance to {suggestion.nextLabel} <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )
+      })()}
+
       <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Status</p>
           <select className="text-sm font-medium bg-transparent border-0 p-0 text-gray-900 cursor-pointer focus:outline-none w-full" value={tx.status} onChange={e => handleStatusChange(e.target.value)}>
-            <option value="pending">Pending</option><option value="contract">Contract</option><option value="inspection">Inspection</option><option value="closed">Closed</option><option value="cancelled">Cancelled</option>
+            <option value="pending">Pending</option><option value="contract">Contract</option><option value="inspection">Inspection</option><option value="loan">Loan & Appraisal</option><option value="closing">Closing</option><option value="closed">Closed</option><option value="cancelled">Cancelled</option>
           </select>
         </div>
       </div>
