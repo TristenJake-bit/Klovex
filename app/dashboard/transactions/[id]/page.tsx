@@ -17,7 +17,7 @@ export default function TransactionDetailPage() {
   const [checklist, setChecklist] = useState<any[]>([])
   const [checklistFilter, setChecklistFilter] = useState('all')
   const [generatingChecklist, setGeneratingChecklist] = useState(false)
-  const [findingsAlert, setFindingsAlert] = useState<{ risks: any[]; criticalDates: any[]; actionItems: any[]; summary: string; documentType: string; docName: string } | null>(null)
+  const [findingsAlert, setFindingsAlert] = useState<{ risks: any[]; criticalDates: any[]; actionItems: any[]; completenessIssues: any[]; summary: string; documentType: string; docName: string } | null>(null)
   const [alertDismissed, setAlertDismissed] = useState(false)
   const [contacts, setContacts] = useState<any[]>([])
   const [showContactForm, setShowContactForm] = useState(false)
@@ -40,11 +40,12 @@ export default function TransactionDetailPage() {
       setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
       // Show alert for most recent analysis with findings
       const a = data.analysis
-      if (a && ((a.risks && a.risks.length > 0) || (a.criticalDates && a.criticalDates.length > 0) || (a.actionItems && a.actionItems.length > 0))) {
+      if (a && ((a.risks && a.risks.length > 0) || (a.criticalDates && a.criticalDates.length > 0) || (a.actionItems && a.actionItems.length > 0) || (a.completenessIssues && a.completenessIssues.length > 0))) {
         setFindingsAlert(prev => prev || {
           risks: a.risks || [],
           criticalDates: a.criticalDates || [],
           actionItems: a.actionItems || [],
+          completenessIssues: a.completenessIssues || [],
           summary: a.summary || '',
           documentType: a.documentType || 'Document',
           docName: docName || 'Document',
@@ -104,12 +105,13 @@ export default function TransactionDetailPage() {
         setAnalyses(prev => ({ ...prev, [docId]: data.analysis }))
         // Show findings alert banner
         const a = data.analysis
-        const hasFindings = (a.risks && a.risks.length > 0) || (a.criticalDates && a.criticalDates.length > 0) || (a.actionItems && a.actionItems.length > 0)
+        const hasFindings = (a.risks && a.risks.length > 0) || (a.criticalDates && a.criticalDates.length > 0) || (a.actionItems && a.actionItems.length > 0) || (a.completenessIssues && a.completenessIssues.length > 0)
         if (hasFindings) {
           setFindingsAlert({
             risks: a.risks || [],
             criticalDates: a.criticalDates || [],
             actionItems: a.actionItems || [],
+            completenessIssues: a.completenessIssues || [],
             summary: a.summary || '',
             documentType: a.documentType || 'Document',
             docName: docName,
@@ -226,7 +228,7 @@ export default function TransactionDetailPage() {
             {findingsAlert.summary && (
               <p className="text-sm text-gray-700 leading-relaxed">{findingsAlert.summary}</p>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {findingsAlert.risks.filter(r => r.severity === 'high' || r.severity === 'medium').length > 0 && (
                 <div className="bg-white/70 rounded-lg p-3 border border-red-100">
                   <div className="flex items-center gap-1.5 mb-2">
@@ -272,6 +274,22 @@ export default function TransactionDetailPage() {
                       <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
                         <span className="flex-shrink-0 text-red-500 font-bold mt-0.5">!</span>
                         <span>{a.task}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {findingsAlert.completenessIssues && findingsAlert.completenessIssues.length > 0 && (
+                <div className="bg-white/70 rounded-lg p-3 border border-rose-100">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <FileText className="w-3.5 h-3.5 text-rose-500" />
+                    <span className="text-xs font-semibold text-rose-700 uppercase">Document Issues</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {findingsAlert.completenessIssues.map((issue: any, i: number) => (
+                      <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                        <span className="flex-shrink-0 mt-0.5">{issue.severity === 'high' ? '🔴' : '🟡'}</span>
+                        <span>{issue.description}</span>
                       </div>
                     ))}
                   </div>
@@ -480,6 +498,14 @@ export default function TransactionDetailPage() {
                     <div className="flex items-center gap-2">
                       {isAnalyzing && <div className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full"><Loader2 className="w-3 h-3 animate-spin" />Analyzing with AI...</div>}
                       {analysis && !isAnalyzing && <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-full"><CheckCircle className="w-3 h-3" />Analysis Ready</div>}
+                      {analysis && !isAnalyzing && analysis.completenessIssues && analysis.completenessIssues.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-red-700 bg-red-50 px-3 py-1.5 rounded-full">
+                          <AlertTriangle className="w-3 h-3" />
+                          {analysis.completenessIssues.filter((i: any) => i.severity === 'high').length > 0
+                            ? `${analysis.completenessIssues.filter((i: any) => i.severity === 'high').length} Issue${analysis.completenessIssues.filter((i: any) => i.severity === 'high').length > 1 ? 's' : ''}`
+                            : `${analysis.completenessIssues.length} Warning${analysis.completenessIssues.length > 1 ? 's' : ''}`}
+                        </div>
+                      )}
                       <button onClick={() => analyzeDocument(doc.id, doc.url, doc.name, id)} className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors" disabled={isAnalyzing}><Brain className="w-3 h-3" />{analysis ? 'Re-analyze' : 'Analyze'}</button>
                       <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-brand-600 px-3 py-1.5 border border-gray-200 rounded-full transition-colors">View</a>
                       {analysis && <button onClick={() => setExpandedAnalysis(isExpanded ? null : doc.id)} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors">{isExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}</button>}
@@ -519,6 +545,27 @@ export default function TransactionDetailPage() {
                         {analysis.contingencies && analysis.contingencies.length > 0 && <div><div className="flex items-center gap-2 mb-3"><CheckCircle className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Contingencies</span></div><div className="space-y-2">{analysis.contingencies.map((c: any, i: number) => <div key={i} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg text-xs"><span className="text-gray-600">{c.name}</span><span className={`px-2 py-0.5 rounded-full font-medium capitalize ${c.status === 'satisfied' ? 'bg-green-100 text-green-700' : c.status === 'waived' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span></div>)}</div></div>}
                       </div>
                       {analysis.risks && analysis.risks.length > 0 && <div><div className="flex items-center gap-2 mb-3"><AlertTriangle className="w-3.5 h-3.5 text-orange-500" /><span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Risks and Missing Items</span></div><div className="space-y-2">{analysis.risks.map((risk: any, i: number) => <div key={i} className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs"><span>{risk.severity === 'high' ? '🔴' : risk.severity === 'medium' ? '🟡' : '🟢'}</span><span className="text-gray-700">{risk.issue}</span></div>)}</div></div>}
+                      {analysis.completenessIssues && analysis.completenessIssues.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <FileText className="w-3.5 h-3.5 text-rose-500" />
+                            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Document Completeness Issues</span>
+                          </div>
+                          <div className="space-y-2">
+                            {analysis.completenessIssues.map((issue: any, i: number) => (
+                              <div key={i} className="flex items-start gap-2 p-3 rounded-lg text-xs border" style={{ background: issue.severity === 'high' ? '#fef2f2' : '#fffbeb', borderColor: issue.severity === 'high' ? '#fecaca' : '#fde68a' }}>
+                                <span className="flex-shrink-0">{issue.severity === 'high' ? '🔴' : '🟡'}</span>
+                                <div>
+                                  <span className="text-gray-700">{issue.description}</span>
+                                  <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: issue.type === 'missing_signature' ? '#fee2e2' : issue.type === 'missing_date' ? '#fef3c7' : issue.type === 'blank_field' ? '#e0e7ff' : '#fce7f3', color: issue.type === 'missing_signature' ? '#991b1b' : issue.type === 'missing_date' ? '#92400e' : issue.type === 'blank_field' ? '#3730a3' : '#9d174d' }}>
+                                    {issue.type === 'missing_signature' ? 'Missing Signature' : issue.type === 'missing_date' ? 'Missing Date' : issue.type === 'blank_field' ? 'Blank Field' : 'Inconsistency'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
