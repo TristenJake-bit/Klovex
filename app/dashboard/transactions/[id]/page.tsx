@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight, GitCompare } from 'lucide-react'
 const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', loan:'bg-indigo-100 text-indigo-700', closing:'bg-teal-100 text-teal-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
 const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
 const CONTACT_ROLES = ['Buyer', 'Seller', "Buyer's Agent", "Seller's Agent", 'Lender', 'Escrow Officer', 'Title Officer', 'Inspector', 'Appraiser', 'HOA']
@@ -23,6 +23,8 @@ export default function TransactionDetailPage() {
   const [showContactForm, setShowContactForm] = useState(false)
   const [editingContact, setEditingContact] = useState<any>(null)
   const [contactForm, setContactForm] = useState({ role: 'Buyer', name: '', email: '', phone: '', company: '' })
+  const [comparing, setComparing] = useState(false)
+  const [comparisonResult, setComparisonResult] = useState<any>(null)
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
@@ -190,6 +192,18 @@ export default function TransactionDetailPage() {
     const supabase = createClient()
     await (supabase as any).from('transaction_contacts').delete().eq('id', contactId)
     setContacts(prev => prev.filter(c => c.id !== contactId))
+  }
+
+  async function compareDocuments() {
+    setComparing(true)
+    setComparisonResult(null)
+    try {
+      const res = await fetch('/api/compare-documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactionId: id }) })
+      const data = await res.json()
+      if (data.comparison) setComparisonResult(data.comparison)
+      else setComparisonResult({ error: data.error || 'Comparison failed' })
+    } catch (err) { setComparisonResult({ error: 'Comparison request failed' }) }
+    setComparing(false)
   }
 
   async function toggleTask(taskId: string, completed: boolean) {
@@ -521,10 +535,17 @@ export default function TransactionDetailPage() {
       <div className="card p-4 md:p-6">
         <div className="flex items-center justify-between mb-6">
           <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">AI analysis runs automatically on upload</p></div>
-          <label className="btn-primary px-4 py-2 text-sm cursor-pointer flex items-center gap-2">
-            {uploading ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</> : <>Upload Document</>}
-            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple disabled={uploading} />
-          </label>
+          <div className="flex items-center gap-2">
+            {Object.keys(analyses).length >= 2 && (
+              <button onClick={compareDocuments} disabled={comparing} className="flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-lg transition-colors font-medium">
+                {comparing ? <><Loader2 className="w-3 h-3 animate-spin" /> Comparing...</> : <><GitCompare className="w-3.5 h-3.5" /> Compare Documents</>}
+              </button>
+            )}
+            <label className="btn-primary px-4 py-2 text-sm cursor-pointer flex items-center gap-2">
+              {uploading ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</> : <>Upload Document</>}
+              <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple disabled={uploading} />
+            </label>
+          </div>
         </div>
         {documents.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
@@ -622,6 +643,66 @@ export default function TransactionDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Document Comparison Results */}
+      {comparisonResult && !comparisonResult.error && (
+        <div className="card p-4 md:p-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                <GitCompare className="w-4 h-4 text-purple-500" /> Document Comparison
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">{comparisonResult.summary}</p>
+            </div>
+            <button onClick={() => setComparisonResult(null)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+          {comparisonResult.discrepancies && comparisonResult.discrepancies.length > 0 ? (
+            <div className="space-y-3">
+              {comparisonResult.discrepancies.map((d: any, i: number) => (
+                <div key={i} className={`p-4 rounded-lg border ${d.severity === 'high' ? 'bg-red-50 border-red-200' : d.severity === 'medium' ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm">{d.severity === 'high' ? '🔴' : d.severity === 'medium' ? '🟡' : '🔵'}</span>
+                    <span className={`text-sm font-semibold ${d.severity === 'high' ? 'text-red-800' : d.severity === 'medium' ? 'text-yellow-800' : 'text-blue-800'}`}>{d.field}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {d.documents?.map((docName: string, j: number) => (
+                      <div key={j} className="text-xs bg-white/80 rounded-lg px-3 py-1.5 border border-gray-200">
+                        <span className="text-gray-500">{docName}:</span>{' '}
+                        <span className="font-medium text-gray-800">{d.values?.[j] || '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-600">{d.description}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 bg-green-50 rounded-xl border border-green-200">
+              <CheckCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />
+              <p className="text-sm text-green-700 font-medium">No discrepancies found</p>
+              <p className="text-xs text-green-600 mt-1">All documents are consistent</p>
+            </div>
+          )}
+          {comparisonResult.consistentFields && comparisonResult.consistentFields.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-gray-500 mb-2 font-medium">Consistent across all documents:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {comparisonResult.consistentFields.map((field: string, i: number) => (
+                  <span key={i} className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full border border-green-200">{field}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {comparisonResult?.error && (
+        <div className="card p-4 mt-6 bg-red-50 border-red-200 text-sm text-red-700 flex items-center justify-between">
+          <span>{comparisonResult.error}</span>
+          <button onClick={() => setComparisonResult(null)} className="p-1 hover:bg-red-100 rounded"><X className="w-4 h-4" /></button>
+        </div>
+      )}
 
       {/* TC CHECKLIST */}
       <div className="card p-6 mt-6">
