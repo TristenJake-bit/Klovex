@@ -33,19 +33,30 @@ export default function SettingsPage() {
   const [cancelStep, setCancelStep] = useState<'idle' | 'confirm' | 'incentive' | 'final'>('idle')
   const [cancelling, setCancelling] = useState(false)
   const [cancelDone, setCancelDone] = useState(false)
+  const [claimingCredit, setClaimingCredit] = useState(false)
+  const [creditClaimed, setCreditClaimed] = useState(false)
+  const [retentionEligible, setRetentionEligible] = useState(true)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       ;(supabase as any).from('profiles').select('*').eq('id', user.id).single().then(({ data }: any) => {
-        if (data) setProfile({
-          full_name: data.full_name || '',
-          email: data.email || '',
-          company: data.company || '',
-          phone: data.phone || '',
-          plan: data.plan || 'starter',
-        })
+        if (data) {
+          setProfile({
+            full_name: data.full_name || '',
+            email: data.email || '',
+            company: data.company || '',
+            phone: data.phone || '',
+            plan: data.plan || 'starter',
+          })
+          // Check if retention offer was used within the last 6 months
+          if (data.retention_offer_used_at) {
+            const sixMonthsAgo = new Date()
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+            setRetentionEligible(new Date(data.retention_offer_used_at) < sixMonthsAgo)
+          }
+        }
         setLoading(false)
       })
     })
@@ -73,6 +84,33 @@ export default function SettingsPage() {
     setCancelling(false)
     setCancelDone(true)
     setCancelStep('idle')
+  }
+
+  async function claimFreeTransaction() {
+    setClaimingCredit(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    // Get current profile to read transactions_used
+    const { data: currentProfile } = await (supabase as any).from('profiles').select('transactions_used').eq('id', user.id).single()
+    const currentUsed = currentProfile?.transactions_used || 0
+    // Subtract 1 from transactions_used (giving them 1 free credit), and mark offer as used
+    await (supabase as any).from('profiles').update({
+      transactions_used: Math.max(0, currentUsed - 1),
+      retention_offer_used_at: new Date().toISOString(),
+    }).eq('id', user.id)
+    setClaimingCredit(false)
+    setCreditClaimed(true)
+    setCancelStep('idle')
+    setRetentionEligible(false)
+  }
+
+  function handleStillWantToCancel() {
+    if (retentionEligible) {
+      setCancelStep('incentive')
+    } else {
+      setCancelStep('final')
+    }
   }
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -145,6 +183,12 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {creditClaimed && (
+            <div className="bg-brand-50 border border-brand-200 rounded-lg px-4 py-3 text-sm text-brand-700">
+              1 free transaction credit has been added to your account. Thanks for staying with Klovex!
+            </div>
+          )}
+
           {cancelStep === 'idle' && !cancelDone && (
             <p className="text-xs text-gray-400">
               Need to make a change?{' '}
@@ -171,7 +215,7 @@ export default function SettingsPage() {
                 </ul>
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={() => setCancelStep('incentive')} className="text-xs text-red-500 hover:underline">
+                <button onClick={handleStillWantToCancel} className="text-xs text-red-500 hover:underline">
                   I still want to cancel
                 </button>
                 <button onClick={() => setCancelStep('idle')} className="btn-primary text-sm px-4 py-2">
@@ -186,12 +230,12 @@ export default function SettingsPage() {
               <div className="bg-brand-50 border border-brand-200 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Gift className="w-4 h-4 text-brand-500" />
-                  <p className="text-sm font-semibold text-brand-800">Stay and get a free month</p>
+                  <p className="text-sm font-semibold text-brand-800">Stay and get 1 free transaction</p>
                 </div>
-                <p className="text-sm text-brand-700">We will credit your next month free - no charge on your next billing date. Just reach out and we will apply it to your account.</p>
-                <a href="mailto:hello@klovex.app?subject=Free Month Credit Request" className="inline-block mt-3 btn-primary text-sm px-4 py-2">
-                  Claim free month
-                </a>
+                <p className="text-sm text-brand-700">We&apos;d hate to see you go. Here&apos;s a free transaction credit on us — it&apos;ll be added to your current billing period immediately.</p>
+                <button onClick={claimFreeTransaction} disabled={claimingCredit} className="mt-3 btn-primary text-sm px-4 py-2">
+                  {claimingCredit ? 'Applying credit...' : 'Claim free transaction'}
+                </button>
               </div>
               <button onClick={() => setCancelStep('final')} className="text-xs text-gray-400 hover:text-red-500 transition-colors underline underline-offset-2">
                 No thanks, cancel anyway

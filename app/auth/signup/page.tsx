@@ -43,6 +43,7 @@ export default function SignupPage() {
             <div><label className="label">Password</label><input type="password" className="input" placeholder="Min. 8 characters" value={form.password} onChange={set('password')} required minLength={8} /></div>
             {error && <div className="text-red-500 text-sm bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>}
             <button type="submit" className="btn-primary w-full py-3 mt-2" disabled={loading}>{loading ? 'Creating account...' : 'Create account'}</button>
+            <p className="text-xs text-gray-400 text-center mt-3">By creating an account you agree to our <Link href="/terms" className="text-brand-500 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-brand-500 hover:underline">Privacy Policy</Link>.</p>
           </form>
         </div>
         <p className="text-center text-sm text-gray-500 mt-4">Already have an account? <Link href="/auth/login" className="text-brand-500 font-medium hover:underline">Sign in</Link></p>

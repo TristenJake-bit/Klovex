@@ -212,9 +212,10 @@ export default function HomePage() {
           <span className="font-serif text-lg">Klovex<span className="text-brand-500">.</span></span>
           <span className="text-gray-400">© 2025 TristenJake LLC · DBA Klovex</span>
           <div className="flex gap-6 text-gray-400">
-            <a href="#" className="hover:text-gray-600">Privacy</a>
-            <a href="#" className="hover:text-gray-600">Terms</a>
-            <a href="mailto:hello@klovex.io" className="hover:text-gray-600">Contact</a>
+            <a href="/privacy" className="hover:text-gray-600">Privacy</a>
+            <a href="/terms" className="hover:text-gray-600">Terms</a>
+            <a href="/disclaimer" className="hover:text-gray-600">Disclaimer</a>
+            <a href="mailto:hello@klovex.app" className="hover:text-gray-600">Contact</a>
           </div>
         </div>
       </footer>
