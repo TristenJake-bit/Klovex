@@ -25,6 +25,7 @@ export default function TransactionDetailPage() {
   const [contactForm, setContactForm] = useState({ role: 'Buyer', name: '', email: '', phone: '', company: '' })
   const [comparing, setComparing] = useState(false)
   const [comparisonResult, setComparisonResult] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'checklist' | 'timeline'>('overview')
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
@@ -215,11 +216,24 @@ export default function TransactionDetailPage() {
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
   const fmtMoney = (n: number) => n ? `$${n.toLocaleString()}` : '—'
   const fmtSize = (b: number) => b < 1048576 ? `${(b/1024).toFixed(0)} KB` : `${(b/1048576).toFixed(1)} MB`
+  const completedCount = checklist.filter(t => t.completed).length
+  const totalCount = checklist.length
+  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
   if (loading) return <div className="p-8 text-gray-400">Loading...</div>
   if (!tx) return <div className="p-8 text-gray-400">Transaction not found</div>
+
+  const TABS = [
+    { id: 'overview' as const, label: 'Overview', icon: Home },
+    { id: 'documents' as const, label: 'Documents', icon: FileText, badge: documents.length || undefined },
+    { id: 'checklist' as const, label: 'Checklist', icon: CheckCircle, badge: totalCount > 0 ? `${completedCount}/${totalCount}` : undefined },
+    { id: 'timeline' as const, label: 'Timeline', icon: Clock, badge: timeline.length || undefined },
+  ]
+
   return (
     <div className="p-4 md:p-8 max-w-5xl">
-      <div className="flex items-center gap-3 mb-5 md:mb-8">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
         <Link href="/dashboard/transactions" className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><ArrowLeft className="w-4 h-4 text-brand-500" /></Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
@@ -229,7 +243,20 @@ export default function TransactionDetailPage() {
           <p className="text-gray-500 text-sm mt-0.5 capitalize">{tx.transaction_type} · Created {fmt(tx.created_at)}</p>
         </div>
       </div>
-      {/* AI Findings Alert Banner */}
+
+      {/* Tab Navigation */}
+      <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id ? 'border-brand-500 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+            {tab.badge && <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>{tab.badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* AI Findings Alert Banner — shows on all tabs */}
       {findingsAlert && !alertDismissed && (
         <div className="mb-4 md:mb-6 rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-red-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-orange-100/60 border-b border-orange-200">
@@ -243,74 +270,30 @@ export default function TransactionDetailPage() {
             </button>
           </div>
           <div className="p-4 space-y-3">
-            {findingsAlert.summary && (
-              <p className="text-sm text-gray-700 leading-relaxed">{findingsAlert.summary}</p>
-            )}
+            {findingsAlert.summary && <p className="text-sm text-gray-700 leading-relaxed">{findingsAlert.summary}</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {findingsAlert.risks.filter(r => r.severity === 'high' || r.severity === 'medium').length > 0 && (
                 <div className="bg-white/70 rounded-lg p-3 border border-red-100">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                    <span className="text-xs font-semibold text-red-700 uppercase">Risks</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {findingsAlert.risks.filter(r => r.severity === 'high' || r.severity === 'medium').map((r, i) => (
-                      <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                        <span className="flex-shrink-0 mt-0.5">{r.severity === 'high' ? '🔴' : '🟡'}</span>
-                        <span>{r.issue}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <div className="flex items-center gap-1.5 mb-2"><AlertTriangle className="w-3.5 h-3.5 text-red-500" /><span className="text-xs font-semibold text-red-700 uppercase">Risks</span></div>
+                  <div className="space-y-1.5">{findingsAlert.risks.filter(r => r.severity === 'high' || r.severity === 'medium').map((r, i) => (<div key={i} className="text-xs text-gray-700 flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">{r.severity === 'high' ? '🔴' : '🟡'}</span><span>{r.issue}</span></div>))}</div>
                 </div>
               )}
               {findingsAlert.criticalDates.length > 0 && (
                 <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Calendar className="w-3.5 h-3.5 text-purple-500" />
-                    <span className="text-xs font-semibold text-purple-700 uppercase">Critical Dates</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {findingsAlert.criticalDates.map((d, i) => (
-                      <div key={i} className="text-xs text-gray-700 flex items-center justify-between">
-                        <span>{d.label}</span>
-                        <span className={`font-medium ${d.daysUntil != null && d.daysUntil <= 7 ? 'text-red-600' : d.daysUntil != null && d.daysUntil <= 14 ? 'text-yellow-600' : 'text-gray-500'}`}>
-                          {d.date}{d.daysUntil != null ? ` (${d.daysUntil <= 0 ? 'Today' : d.daysUntil + 'd'})` : ''}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <div className="flex items-center gap-1.5 mb-2"><Calendar className="w-3.5 h-3.5 text-purple-500" /><span className="text-xs font-semibold text-purple-700 uppercase">Critical Dates</span></div>
+                  <div className="space-y-1.5">{findingsAlert.criticalDates.map((d, i) => (<div key={i} className="text-xs text-gray-700 flex items-center justify-between"><span>{d.label}</span><span className={`font-medium ${d.daysUntil != null && d.daysUntil <= 7 ? 'text-red-600' : d.daysUntil != null && d.daysUntil <= 14 ? 'text-yellow-600' : 'text-gray-500'}`}>{d.date}{d.daysUntil != null ? ` (${d.daysUntil <= 0 ? 'Today' : d.daysUntil + 'd'})` : ''}</span></div>))}</div>
                 </div>
               )}
               {findingsAlert.actionItems.filter(a => a.priority === 'high').length > 0 && (
                 <div className="bg-white/70 rounded-lg p-3 border border-amber-100">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-xs font-semibold text-amber-700 uppercase">Action Items</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {findingsAlert.actionItems.filter(a => a.priority === 'high').map((a, i) => (
-                      <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                        <span className="flex-shrink-0 text-red-500 font-bold mt-0.5">!</span>
-                        <span>{a.task}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <div className="flex items-center gap-1.5 mb-2"><TrendingUp className="w-3.5 h-3.5 text-amber-500" /><span className="text-xs font-semibold text-amber-700 uppercase">Action Items</span></div>
+                  <div className="space-y-1.5">{findingsAlert.actionItems.filter(a => a.priority === 'high').map((a, i) => (<div key={i} className="text-xs text-gray-700 flex items-start gap-1.5"><span className="flex-shrink-0 text-red-500 font-bold mt-0.5">!</span><span>{a.task}</span></div>))}</div>
                 </div>
               )}
               {findingsAlert.completenessIssues && findingsAlert.completenessIssues.length > 0 && (
                 <div className="bg-white/70 rounded-lg p-3 border border-rose-100">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <FileText className="w-3.5 h-3.5 text-rose-500" />
-                    <span className="text-xs font-semibold text-rose-700 uppercase">Document Issues</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {findingsAlert.completenessIssues.map((issue: any, i: number) => (
-                      <div key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                        <span className="flex-shrink-0 mt-0.5">{issue.severity === 'high' ? '🔴' : '🟡'}</span>
-                        <span>{issue.description}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <div className="flex items-center gap-1.5 mb-2"><FileText className="w-3.5 h-3.5 text-rose-500" /><span className="text-xs font-semibold text-rose-700 uppercase">Document Issues</span></div>
+                  <div className="space-y-1.5">{findingsAlert.completenessIssues.map((issue: any, i: number) => (<div key={i} className="text-xs text-gray-700 flex items-start gap-1.5"><span className="flex-shrink-0 mt-0.5">{issue.severity === 'high' ? '🔴' : '🟡'}</span><span>{issue.description}</span></div>))}</div>
                 </div>
               )}
             </div>
@@ -318,6 +301,8 @@ export default function TransactionDetailPage() {
         </div>
       )}
 
+      {/* ==================== OVERVIEW TAB ==================== */}
+      {activeTab === 'overview' && <>
       {/* Status Auto-Progression Banner */}
       {checklist.length > 0 && tx && (() => {
         const phaseComplete = (phase: string) => {
@@ -443,7 +428,7 @@ export default function TransactionDetailPage() {
         )
       })()}
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="card p-4 md:p-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Home className="w-4 h-4 text-brand-500" /> Property Details</h2>
           <div className="space-y-3 text-sm">
@@ -454,16 +439,18 @@ export default function TransactionDetailPage() {
           </div>
         </div>
         <div className="card p-4 md:p-6">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-brand-500" /> Timeline</h2>
-          <form onSubmit={addNote} className="flex gap-2 mb-5">
-            <input type="text" className="input text-sm flex-1" placeholder="Add a note..." value={note} onChange={e => setNote(e.target.value)} />
-            <button type="submit" className="btn-primary px-4 py-2 text-sm" disabled={savingNote}>Add</button>
-          </form>
-          <div className="space-y-3">
-            {timeline.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No timeline events yet</p> : timeline.map((event: any) => (
-              <div key={event.id} className="flex gap-3"><div className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-2 flex-shrink-0" /><div><p className="text-sm text-gray-700">{event.content}</p><p className="text-xs text-gray-400 mt-0.5">{fmt(event.created_at)}</p></div></div>
-            ))}
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-brand-500" /> Quick Stats</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between"><span className="text-gray-500">Documents uploaded</span><span className="text-gray-900 font-medium">{documents.length}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Checklist progress</span><span className="text-gray-900 font-medium">{totalCount > 0 ? `${completedCount}/${totalCount} (${progressPct}%)` : 'Not generated'}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Contacts added</span><span className="text-gray-900 font-medium">{contacts.length}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Timeline events</span><span className="text-gray-900 font-medium">{timeline.length}</span></div>
           </div>
+          {documents.length === 0 && (
+            <button onClick={() => setActiveTab('documents')} className="mt-4 w-full text-sm text-brand-600 bg-brand-50 hover:bg-brand-100 py-2.5 rounded-lg transition-colors font-medium">
+              Upload your first document to get started
+            </button>
+          )}
         </div>
       </div>
 
@@ -532,9 +519,13 @@ export default function TransactionDetailPage() {
         )}
       </div>
 
+      </>}
+
+      {/* ==================== DOCUMENTS TAB ==================== */}
+      {activeTab === 'documents' && <>
       <div className="card p-4 md:p-6">
         <div className="flex items-center justify-between mb-6">
-          <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">AI analysis runs automatically on upload</p></div>
+          <div><h2 className="font-semibold text-gray-900 flex items-center gap-2"><FileText className="w-4 h-4 text-brand-500" /> Documents</h2><p className="text-xs text-gray-400 mt-0.5">Upload documents and AI will analyze them automatically</p></div>
           <div className="flex items-center gap-2">
             {Object.keys(analyses).length >= 2 && (
               <button onClick={compareDocuments} disabled={comparing} className="flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-lg transition-colors font-medium">
@@ -704,8 +695,11 @@ export default function TransactionDetailPage() {
         </div>
       )}
 
-      {/* TC CHECKLIST */}
-      <div className="card p-6 mt-6">
+      </>}
+
+      {/* ==================== CHECKLIST TAB ==================== */}
+      {activeTab === 'checklist' && <>
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -765,6 +759,49 @@ export default function TransactionDetailPage() {
           </>
         )}
       </div>
+      </>}
+
+      {/* ==================== TIMELINE TAB ==================== */}
+      {activeTab === 'timeline' && <>
+      <div className="card p-4 md:p-6">
+        <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-brand-500" /> Activity Timeline</h2>
+        <p className="text-xs text-gray-400 mb-5">Notes, AI events, status changes, and email notifications</p>
+        <form onSubmit={addNote} className="flex gap-2 mb-6">
+          <input type="text" className="input text-sm flex-1" placeholder="Add a note to the timeline..." value={note} onChange={e => setNote(e.target.value)} />
+          <button type="submit" className="btn-primary px-4 py-2 text-sm" disabled={savingNote}>{savingNote ? 'Adding...' : 'Add note'}</button>
+        </form>
+        {timeline.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <Clock className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400 font-medium">No activity yet</p>
+            <p className="text-xs text-gray-300 mt-1">Timeline events will appear as you upload documents and manage this transaction</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {timeline.map((event: any) => {
+              const isAI = event.type?.startsWith('ai_')
+              const isEmail = event.type === 'email'
+              const isStatus = event.type === 'status_change'
+              const isSystem = event.type === 'system'
+              return (
+                <div key={event.id} className="flex gap-3">
+                  <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${isAI ? 'bg-purple-400' : isEmail ? 'bg-blue-400' : isStatus ? 'bg-green-400' : isSystem ? 'bg-orange-400' : 'bg-brand-400'}`} />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700">{event.content}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-400">{fmt(event.created_at)}</p>
+                      {isAI && <span className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">AI</span>}
+                      {isEmail && <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">Email</span>}
+                      {isStatus && <span className="text-xs bg-green-50 text-green-600 px-1.5 py-0.5 rounded">Status</span>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+      </>}
     </div>
   )
 }

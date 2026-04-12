@@ -106,6 +106,34 @@ export default async function DashboardPage() {
         )}
       </div>
 
+      {/* Getting Started — shows when user has no transactions */}
+      {transactions.length === 0 && (
+        <div className="mb-6 card p-6 border-2 border-brand-100 bg-brand-50/30">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Get started in 3 steps</h2>
+          <p className="text-sm text-gray-500 mb-5">Klovex handles the paperwork so you can focus on closing deals.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { step: '1', title: 'Create a transaction', desc: 'Enter the property address, price, and close date.', action: '/dashboard/transactions/new', actionLabel: 'Create transaction', done: false },
+              { step: '2', title: 'Upload your first document', desc: 'Upload the purchase agreement — AI reads it instantly.', action: null, actionLabel: null, done: false },
+              { step: '3', title: 'Let AI do the rest', desc: 'Checklist auto-generates, deadlines are tracked, and you get reminders.', action: null, actionLabel: null, done: false },
+            ].map((item) => (
+              <div key={item.step} className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-7 h-7 rounded-full bg-brand-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">{item.step}</div>
+                  <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed ml-10">{item.desc}</p>
+                {item.action && (
+                  <Link href={item.action} className="mt-3 ml-10 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700">
+                    {item.actionLabel} <ArrowRight size={12} />
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {isAdmin && plan === 'starter' && transactions.filter((t: any) => { const m = new Date(); m.setDate(1); m.setHours(0,0,0,0); return new Date(t.created_at) >= m }).length >= 6 && (
         <div className="mb-6 bg-brand-50 border border-brand-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
