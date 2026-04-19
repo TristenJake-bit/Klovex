@@ -26,6 +26,10 @@ export default function TransactionDetailPage() {
   const [comparing, setComparing] = useState(false)
   const [comparisonResult, setComparisonResult] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'checklist' | 'timeline'>('overview')
+  function switchTab(tab: typeof activeTab) {
+    setActiveTab(tab)
+    window.dispatchEvent(new CustomEvent('help-tab-change', { detail: tab }))
+  }
   useEffect(() => {
     const supabase = createClient()
     supabase.from('transactions').select('*').eq('id', id).single().then(({ data }) => { setTx(data); setLoading(false) })
@@ -247,7 +251,7 @@ export default function TransactionDetailPage() {
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} onClick={() => switchTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id ? 'border-brand-500 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <tab.icon className="w-4 h-4" />
             {tab.label}
@@ -447,7 +451,7 @@ export default function TransactionDetailPage() {
             <div className="flex justify-between"><span className="text-gray-500">Timeline events</span><span className="text-gray-900 font-medium">{timeline.length}</span></div>
           </div>
           {documents.length === 0 && (
-            <button onClick={() => setActiveTab('documents')} className="mt-4 w-full text-sm text-brand-600 bg-brand-50 hover:bg-brand-100 py-2.5 rounded-lg transition-colors font-medium">
+            <button onClick={() => switchTab('documents')} className="mt-4 w-full text-sm text-brand-600 bg-brand-50 hover:bg-brand-100 py-2.5 rounded-lg transition-colors font-medium">
               Upload your first document to get started
             </button>
           )}
