@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight, GitCompare } from 'lucide-react'
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight, GitCompare, Share2, Copy, Check, ExternalLink } from 'lucide-react'
 const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', loan:'bg-indigo-100 text-indigo-700', closing:'bg-teal-100 text-teal-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
 const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
 const CONTACT_ROLES = ['Buyer', 'Seller', "Buyer's Agent", "Seller's Agent", 'Lender', 'Escrow Officer', 'Title Officer', 'Inspector', 'Appraiser', 'HOA']
@@ -26,6 +26,9 @@ export default function TransactionDetailPage() {
   const [comparing, setComparing] = useState(false)
   const [comparisonResult, setComparisonResult] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'checklist' | 'timeline'>('overview')
+  const [portalToken, setPortalToken] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalCopied, setPortalCopied] = useState(false)
   function switchTab(tab: typeof activeTab) {
     setActiveTab(tab)
     window.dispatchEvent(new CustomEvent('help-tab-change', { detail: tab }))
@@ -198,6 +201,36 @@ export default function TransactionDetailPage() {
     const supabase = createClient()
     await (supabase as any).from('transaction_contacts').delete().eq('id', contactId)
     setContacts(prev => prev.filter(c => c.id !== contactId))
+  }
+
+  // Load existing portal token
+  useEffect(() => {
+    const supabase = createClient()
+    ;(supabase as any).from('transaction_tokens').select('token').eq('transaction_id', id).gt('expires_at', new Date().toISOString()).limit(1).then(({ data }: any) => {
+      if (data && data.length > 0) setPortalToken(data[0].token)
+    })
+  }, [id])
+
+  async function generatePortalLink() {
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactionId: id }) })
+      const data = await res.json()
+      if (data.token) setPortalToken(data.token)
+    } catch (err) { console.error('Failed to generate portal:', err) }
+    setPortalLoading(false)
+  }
+
+  async function revokePortalLink() {
+    await fetch('/api/portal', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactionId: id }) })
+    setPortalToken(null)
+  }
+
+  function copyPortalLink() {
+    const url = `${window.location.origin}/portal/${portalToken}`
+    navigator.clipboard.writeText(url)
+    setPortalCopied(true)
+    setTimeout(() => setPortalCopied(false), 2000)
   }
 
   async function compareDocuments() {
@@ -521,6 +554,39 @@ export default function TransactionDetailPage() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Share Portal */}
+      <div className="card p-4 md:p-6">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Share2 className="w-4 h-4 text-brand-500" /> Share Portal</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Share a read-only link with buyers, sellers, or other parties</p>
+          </div>
+        </div>
+        {portalToken ? (
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 truncate">
+                {typeof window !== 'undefined' ? `${window.location.origin}/portal/${portalToken}` : `/portal/${portalToken}`}
+              </div>
+              <button onClick={copyPortalLink} className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0">
+                {portalCopied ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy link</>}
+              </button>
+              <a href={`/portal/${portalToken}`} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0">
+                <ExternalLink className="w-4 h-4 text-gray-500" />
+              </a>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-400">Link expires in 30 days. Parties can view status, deadlines, and progress — no login required.</p>
+              <button onClick={revokePortalLink} className="text-xs text-red-500 hover:text-red-600 underline underline-offset-2 flex-shrink-0 ml-4">Revoke link</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={generatePortalLink} disabled={portalLoading} className="w-full py-4 bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-200 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
+            {portalLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Share2 className="w-4 h-4" /> Generate shareable portal link</>}
+          </button>
         )}
       </div>
 
