@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
 import { sendAgentAlert } from '@/lib/email'
+import { createNotification } from '@/lib/notify'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient2()
@@ -329,6 +330,38 @@ export async function POST(req: NextRequest) {
 
       if (timelineEntries.length > 0) {
         await (supabase as any).from('timeline_events').insert(timelineEntries)
+      }
+
+      // In-app notifications
+      const notifRisks = (analysis.risks || []).filter((r: any) => r.severity === 'high')
+      const notifIssues = (analysis.completenessIssues || []).filter((i: any) => i.severity === 'high')
+
+      await createNotification({
+        userId: session.user.id,
+        transactionId,
+        type: 'ai_analysis',
+        title: `AI analyzed "${fileName}"`,
+        body: analysis.summary || `${analysis.documentType || 'Document'} analysis complete`,
+      })
+
+      if (notifRisks.length > 0) {
+        await createNotification({
+          userId: session.user.id,
+          transactionId,
+          type: 'risk',
+          title: `${notifRisks.length} high-risk item${notifRisks.length > 1 ? 's' : ''} found`,
+          body: notifRisks.map((r: any) => r.issue).join('; '),
+        })
+      }
+
+      if (notifIssues.length > 0) {
+        await createNotification({
+          userId: session.user.id,
+          transactionId,
+          type: 'risk',
+          title: `Document issues found in "${fileName}"`,
+          body: notifIssues.map((i: any) => i.description).join('; '),
+        })
       }
     }
 

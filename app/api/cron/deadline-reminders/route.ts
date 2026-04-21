@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { createNotification } from '@/lib/notify'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -136,7 +137,7 @@ export async function GET(req: Request) {
       })
       sent++
 
-      // Log timeline events for each transaction that had deadlines
+      // Log timeline events and in-app notifications for each transaction
       const txIds = [...new Set(deadlines.map(d => d.transactionId))]
       for (const txId of txIds) {
         const txDeadlines = deadlines.filter(d => d.transactionId === txId)
@@ -145,6 +146,15 @@ export async function GET(req: Request) {
           author_id: userId,
           type: 'system',
           content: `Deadline reminder sent: ${txDeadlines.length} task${txDeadlines.length === 1 ? '' : 's'} due within 3 days`,
+        })
+        const overdue = txDeadlines.filter(d => d.daysUntil < 0)
+        const dueToday = txDeadlines.filter(d => d.daysUntil === 0)
+        await createNotification({
+          userId,
+          transactionId: txId,
+          type: 'deadline',
+          title: overdue.length > 0 ? `${overdue.length} overdue task${overdue.length > 1 ? 's' : ''}` : dueToday.length > 0 ? `${dueToday.length} task${dueToday.length > 1 ? 's' : ''} due today` : `${txDeadlines.length} deadline${txDeadlines.length > 1 ? 's' : ''} coming up`,
+          body: txDeadlines.slice(0, 3).map(d => d.task).join('; '),
         })
       }
     } catch (err) {

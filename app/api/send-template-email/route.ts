@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
 import { sendWelcomeEmail, sendClosingConfirmationEmail } from '@/lib/email-templates'
+import { createNotification } from '@/lib/notify'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient2()
@@ -69,6 +70,19 @@ export async function POST(req: NextRequest) {
       author_id: session.user.id,
       type: 'email',
       content: templateLabels[template] || `Email template "${template}" sent`,
+    })
+
+    // In-app notification
+    const notifTitles: Record<string, string> = {
+      welcome: 'Transaction file opened',
+      closing_confirmation: 'Moving to closing phase',
+    }
+    await createNotification({
+      userId: session.user.id,
+      transactionId,
+      type: 'email',
+      title: notifTitles[template] || 'Email sent',
+      body: `${templateLabels[template]} for ${transaction.property_address}`,
     })
 
     return NextResponse.json({ success: true })
