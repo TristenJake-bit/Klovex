@@ -74,7 +74,7 @@ export default function NotificationBell() {
       {/* Bell Button — positioned in mobile header and desktop sidebar area */}
       <button
         onClick={() => { setOpen(!open); if (!open) fetchNotifications() }}
-        className="fixed top-3.5 right-14 md:top-5 md:right-8 z-50 p-2 rounded-lg hover:bg-gray-100 transition-colors bg-white md:bg-transparent"
+        className="fixed top-3.5 right-14 md:top-5 md:left-44 z-40 p-2 rounded-lg hover:bg-gray-100 transition-colors bg-white md:bg-transparent"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-gray-600" />
@@ -89,7 +89,7 @@ export default function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="fixed top-14 right-4 md:top-16 md:right-8 z-50 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] flex flex-col">
+          <div className="fixed top-14 right-4 md:top-16 md:left-14 z-50 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
