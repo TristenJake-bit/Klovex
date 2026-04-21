@@ -9,7 +9,7 @@ export async function sendTransactionCreatedEmail(
   transactionId: string
 ) {
   return resend.emails.send({
-    from: 'Klovex <no-reply@klovex.io>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: clientEmail,
     subject: `Transaction opened: ${propertyAddress}`,
     html: `
@@ -36,7 +36,7 @@ export async function sendInvoiceEmail(
   paymentUrl: string
 ) {
   return resend.emails.send({
-    from: 'Klovex <billing@klovex.io>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: clientEmail,
     subject: `Invoice for ${propertyAddress} — $${amountDollars}`,
     html: `
@@ -71,7 +71,7 @@ export async function sendStatusUpdateEmail(
   }
 
   return resend.emails.send({
-    from: 'Klovex <no-reply@klovex.io>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: clientEmail,
     subject: `Update on ${propertyAddress}: ${statusLabels[newStatus] || newStatus}`,
     html: `
@@ -137,7 +137,7 @@ export async function sendAgentAlert({
   `).join('')
 
   await resend.emails.send({
-    from: 'Klovex <noreply@klovex.app>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: agentEmail,
     subject: `Action Required: ${propertyAddress}`,
     html: `

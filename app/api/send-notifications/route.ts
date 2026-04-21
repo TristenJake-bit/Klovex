@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     }).join('')
 
     await resend.emails.send({
-      from: 'Klovex <notifications@klovex.app>',
+      from: 'Klovex <onboarding@resend.dev>',
       to: emailTo,
       subject: `⚠️ ${overdue.length} overdue task${overdue.length > 1 ? 's' : ''} need your attention`,
       html: `
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     }).join('')
 
     await resend.emails.send({
-      from: 'Klovex <notifications@klovex.app>',
+      from: 'Klovex <onboarding@resend.dev>',
       to: emailTo,
       subject: `📅 ${urgent.length} task${urgent.length > 1 ? 's' : ''} due in the next 3 days`,
       html: `
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
     }).join('')
 
     await resend.emails.send({
-      from: 'Klovex <notifications@klovex.app>',
+      from: 'Klovex <onboarding@resend.dev>',
       to: emailTo,
       subject: `🏠 ${closingSoon.length} transaction${closingSoon.length > 1 ? 's' : ''} closing within 7 days`,
       html: `

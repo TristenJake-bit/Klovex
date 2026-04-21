@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await resend.emails.send({
-      from: 'Klovex <noreply@klovex.app>',
+      from: 'Klovex <onboarding@resend.dev>',
       to: email,
       subject: 'Klovex Test Email — It works!',
       html: `

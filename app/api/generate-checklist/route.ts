@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
+import { txSharedTasks, txSellerTasks, txBuyerTasks } from '@/lib/checklists/texas'
+import { flSharedTasks, flSellerTasks, flBuyerTasks } from '@/lib/checklists/florida'
+import { generalSharedTasks, generalSellerTasks, generalBuyerTasks } from '@/lib/checklists/general'
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerClient2()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { transactionId, acceptanceDate, closingDate, propertyAddress, transactionType, yearBuilt, hasHOA, isSeptic } = await req.json()
+  const { transactionId, acceptanceDate, closingDate, propertyAddress, transactionType, state, yearBuilt, hasHOA, isSeptic } = await req.json()
   if (!transactionId) return NextResponse.json({ error: 'No transactionId' }, { status: 400 })
 
   const acceptance = acceptanceDate ? new Date(acceptanceDate) : new Date()
@@ -21,9 +24,55 @@ export async function POST(req: NextRequest) {
   const isPrePost1978 = yearBuilt && parseInt(yearBuilt) < 1978
   const isPrePost1960 = yearBuilt && parseInt(yearBuilt) < 1960
   const isSeller = transactionType === 'sale'
+  const txState = (state || 'CA').toUpperCase()
 
   await (supabase as any).from('transaction_checklists').delete().eq('transaction_id', transactionId)
 
+  // Route to state-specific checklists for TX and FL, CA uses inline tasks below, others get general
+  if (txState === 'TX') {
+    const tasks = [...txSharedTasks, ...(isSeller ? txSellerTasks : txBuyerTasks)]
+    const tasksWithDates = tasks.map((t: any) => {
+      let due_date: string
+      if (t.days_from_acceptance <= 0) { const d = new Date(closing); d.setDate(d.getDate() + t.days_from_acceptance); due_date = d.toISOString().split('T')[0] }
+      else if (t.phase === 'Closing') { due_date = closing.toISOString().split('T')[0] }
+      else { due_date = daysFromAcceptance(t.days_from_acceptance) }
+      return { ...t, transaction_id: transactionId, due_date, completed: false }
+    })
+    const { error } = await (supabase as any).from('transaction_checklists').insert(tasksWithDates)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, taskCount: tasksWithDates.length, transactionType: isSeller ? 'seller' : 'buyer', state: 'TX' })
+  }
+
+  if (txState === 'FL') {
+    const tasks = [...flSharedTasks, ...(isSeller ? flSellerTasks : flBuyerTasks)]
+    const tasksWithDates = tasks.map((t: any) => {
+      let due_date: string
+      if (t.days_from_acceptance <= 0) { const d = new Date(closing); d.setDate(d.getDate() + t.days_from_acceptance); due_date = d.toISOString().split('T')[0] }
+      else if (t.phase === 'Closing') { due_date = closing.toISOString().split('T')[0] }
+      else { due_date = daysFromAcceptance(t.days_from_acceptance) }
+      return { ...t, transaction_id: transactionId, due_date, completed: false }
+    })
+    const { error } = await (supabase as any).from('transaction_checklists').insert(tasksWithDates)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, taskCount: tasksWithDates.length, transactionType: isSeller ? 'seller' : 'buyer', state: 'FL' })
+  }
+
+  if (txState !== 'CA') {
+    // General US checklist for unsupported states
+    const tasks = [...generalSharedTasks, ...(isSeller ? generalSellerTasks : generalBuyerTasks)]
+    const tasksWithDates = tasks.map((t: any) => {
+      let due_date: string
+      if (t.days_from_acceptance <= 0) { const d = new Date(closing); d.setDate(d.getDate() + t.days_from_acceptance); due_date = d.toISOString().split('T')[0] }
+      else if (t.phase === 'Closing') { due_date = closing.toISOString().split('T')[0] }
+      else { due_date = daysFromAcceptance(t.days_from_acceptance) }
+      return { ...t, transaction_id: transactionId, due_date, completed: false }
+    })
+    const { error } = await (supabase as any).from('transaction_checklists').insert(tasksWithDates)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, taskCount: tasksWithDates.length, transactionType: isSeller ? 'seller' : 'buyer', state: txState })
+  }
+
+  // California checklist (existing detailed implementation below)
   const sharedTasks: any[] = [
     { phase: 'Contract Received', task: 'Review Purchase Agreement (RPA) for completeness and all signatures', responsible: 'TC', days_from_acceptance: 1, category: 'Contract Review', required: true },
     { phase: 'Contract Received', task: 'Verify all pages initialed and dated correctly', responsible: 'TC', days_from_acceptance: 1, category: 'Contract Review', required: true },

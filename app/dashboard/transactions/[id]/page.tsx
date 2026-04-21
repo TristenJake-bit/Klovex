@@ -153,6 +153,7 @@ export default function TransactionDetailPage() {
           closingDate: tx.closing_date,
           propertyAddress: tx.property_address,
           transactionType: tx.transaction_type,
+          state: tx.state || 'CA',
           hasHOA: false,
           yearBuilt: null,
           isSeptic: false,

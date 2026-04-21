@@ -3,7 +3,25 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, DollarSign, FileText, Zap } from 'lucide-react'
+import { ArrowLeft, Home, DollarSign, FileText, Zap, Info } from 'lucide-react'
+
+const US_STATES = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' }, { code: 'AR', name: 'Arkansas' },
+  { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' }, { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' },
+  { code: 'FL', name: 'Florida' }, { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
+  { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' }, { code: 'KS', name: 'Kansas' },
+  { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' }, { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' },
+  { code: 'MA', name: 'Massachusetts' }, { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
+  { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' }, { code: 'NV', name: 'Nevada' },
+  { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' }, { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' },
+  { code: 'NC', name: 'North Carolina' }, { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
+  { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' }, { code: 'SC', name: 'South Carolina' },
+  { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' }, { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' },
+  { code: 'VT', name: 'Vermont' }, { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+  { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }, { code: 'DC', name: 'Washington D.C.' },
+]
+
+const SUPPORTED_STATES = ['CA', 'TX', 'FL']
 
 export default function NewTransactionPage() {
   const router = useRouter()
@@ -56,6 +74,7 @@ export default function NewTransactionPage() {
       purchase_price: form.purchase_price ? parseFloat(form.purchase_price) : null,
       closing_date: form.closing_date || null,
       notes: form.notes,
+      state: form.state,
     }
 
     if (hasIncluded) {
@@ -130,8 +149,15 @@ export default function NewTransactionPage() {
                 <input type="text" className="input" placeholder="Los Angeles" value={form.city} onChange={set('city')} required />
               </div>
               <div>
-                <label className="label">State</label>
-                <input type="text" className="input" value={form.state} onChange={set('state')} maxLength={2} />
+                <label className="label">State *</label>
+                <select className="input" value={form.state} onChange={set('state')} required>
+                  {US_STATES.map(s => (
+                    <option key={s.code} value={s.code}>{s.name}</option>
+                  ))}
+                </select>
+                {!SUPPORTED_STATES.includes(form.state) && (
+                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><Info className="w-3 h-3" />Checklist will use general US real estate guidelines</p>
+                )}
               </div>
               <div>
                 <label className="label">ZIP</label>

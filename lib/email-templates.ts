@@ -88,7 +88,7 @@ export async function sendWelcomeEmail({
   `
 
   return resend.emails.send({
-    from: 'Klovex <noreply@klovex.app>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: agentEmail,
     subject: `Transaction Opened: ${transaction.property_address}`,
     html: emailWrapper('Transaction File Opened', body),
@@ -139,7 +139,7 @@ export async function sendClosingConfirmationEmail({
   `
 
   return resend.emails.send({
-    from: 'Klovex <noreply@klovex.app>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: agentEmail,
     subject: `Closing Confirmed: ${transaction.property_address}`,
     html: emailWrapper('Closing Phase Confirmed', body),
@@ -172,7 +172,7 @@ export async function sendPostCloseFollowUpEmail({
   `
 
   return resend.emails.send({
-    from: 'Klovex <noreply@klovex.app>',
+    from: 'Klovex <onboarding@resend.dev>',
     to: agentEmail,
     subject: `30-Day Follow-Up: ${transaction.property_address}`,
     html: emailWrapper('Post-Close Follow-Up', body),

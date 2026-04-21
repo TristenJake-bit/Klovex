@@ -1,0 +1,61 @@
+// Florida-specific checklist tasks
+// Florida uses FAR/BAR contracts, has wind mitigation requirements, and unique closing customs
+
+export const flSharedTasks = [
+  { phase: 'Contract Received', task: 'Review FAR/BAR "As Is" or Standard Contract for completeness', responsible: 'TC', days_from_acceptance: 1, category: 'Contract Review', required: true },
+  { phase: 'Contract Received', task: 'Verify all pages initialed and dated correctly', responsible: 'TC', days_from_acceptance: 1, category: 'Contract Review', required: true },
+  { phase: 'Contract Received', task: 'Calculate inspection, financing, and closing deadlines', responsible: 'TC', days_from_acceptance: 1, category: 'Deadlines', required: true },
+  { phase: 'Contract Received', task: 'Send executed contract to title company/closing agent', responsible: 'TC', days_from_acceptance: 1, category: 'Escrow', required: true },
+  { phase: 'Contract Received', task: 'Confirm escrow deposit delivered within contract timeline', responsible: 'TC', days_from_acceptance: 3, category: 'Finance', required: true },
+  { phase: 'Contract Received', task: 'Send Transaction Welcome Letter to all parties', responsible: 'TC', days_from_acceptance: 1, category: 'Communication', required: true },
+  { phase: 'Contract Received', task: 'Confirm lender has copy of executed contract', responsible: 'TC', days_from_acceptance: 2, category: 'Finance', required: true },
+  { phase: 'Disclosures', task: 'Seller Property Disclosure delivered to buyer', responsible: 'Listing Agent', days_from_acceptance: 5, category: 'FL Required Disclosure', required: true },
+  { phase: 'Disclosures', task: 'Lead-Based Paint Disclosure (if pre-1978)', responsible: 'Listing Agent', days_from_acceptance: 5, category: 'Federal Required', required: false },
+  { phase: 'Disclosures', task: 'HOA/Condo Rider and docs delivered (if applicable)', responsible: 'Listing Agent', days_from_acceptance: 5, category: 'HOA', required: false },
+  { phase: 'Disclosures', task: 'Radon Gas disclosure provided', responsible: 'Listing Agent', days_from_acceptance: 5, category: 'FL Required Disclosure', required: true },
+  { phase: 'Disclosures', task: 'Energy efficiency rating disclosure', responsible: 'Listing Agent', days_from_acceptance: 5, category: 'FL Required Disclosure', required: true },
+  { phase: 'Disclosures', task: 'Flood zone determination and disclosure', responsible: 'TC', days_from_acceptance: 7, category: 'FL Required Disclosure', required: true },
+  { phase: 'Inspections', task: 'Schedule home inspection within inspection period', responsible: 'Buyer Agent', days_from_acceptance: 3, category: 'Inspection', required: true },
+  { phase: 'Inspections', task: 'Home inspection completed', responsible: 'Buyer', days_from_acceptance: 10, category: 'Inspection', required: true },
+  { phase: 'Inspections', task: 'WDO (termite/wood destroying organism) inspection', responsible: 'TC', days_from_acceptance: 3, category: 'Inspection', required: true },
+  { phase: 'Inspections', task: 'Wind mitigation inspection (for insurance)', responsible: 'Buyer', days_from_acceptance: 10, category: 'FL Required', required: true },
+  { phase: 'Inspections', task: '4-Point inspection (roof, HVAC, electrical, plumbing) if home 30+ years', responsible: 'Buyer', days_from_acceptance: 10, category: 'FL Required', required: false },
+  { phase: 'Inspections', task: 'Review inspection results — request repairs or credits', responsible: 'Buyer Agent', days_from_acceptance: 12, category: 'Inspection', required: true },
+  { phase: 'Inspections', task: 'Inspection contingency resolved', responsible: 'Buyer Agent', days_from_acceptance: 15, category: 'Contingency', required: true },
+  { phase: 'Title', task: 'Title search and commitment ordered', responsible: 'TC', days_from_acceptance: 3, category: 'Title', required: true },
+  { phase: 'Title', task: 'Title commitment received and reviewed', responsible: 'TC', days_from_acceptance: 10, category: 'Title', required: true },
+  { phase: 'Title', task: 'Confirm no liens, judgments, or encumbrances', responsible: 'TC', days_from_acceptance: 10, category: 'Title', required: true },
+  { phase: 'Title', task: 'Title objection period — cure or accept', responsible: 'TC', days_from_acceptance: 15, category: 'Title', required: true },
+  { phase: 'Title', task: 'Order survey (if required by contract)', responsible: 'TC', days_from_acceptance: 10, category: 'Title', required: false },
+  { phase: 'Pre-Closing', task: 'All contingencies resolved', responsible: 'TC', days_from_acceptance: 22, category: 'Contingency', required: true },
+  { phase: 'Pre-Closing', task: 'Closing Disclosure issued — 3 business day review', responsible: 'Lender', days_from_acceptance: -5, category: 'Finance', required: true },
+  { phase: 'Pre-Closing', task: 'Confirm wind/homeowners insurance bound and sent to lender', responsible: 'Buyer', days_from_acceptance: -5, category: 'Insurance', required: true },
+  { phase: 'Pre-Closing', task: 'Confirm wire instructions with closing agent', responsible: 'TC', days_from_acceptance: -3, category: 'Finance', required: true },
+  { phase: 'Pre-Closing', task: 'Schedule closing with closing agent', responsible: 'TC', days_from_acceptance: -3, category: 'Signing', required: true },
+  { phase: 'Pre-Closing', task: 'Final walkthrough completed', responsible: 'Buyer Agent', days_from_acceptance: -1, category: 'Inspection', required: true },
+  { phase: 'Closing', task: 'Buyer and seller sign at closing agent office', responsible: 'TC', days_from_acceptance: 0, category: 'Signing', required: true },
+  { phase: 'Closing', task: 'Confirm loan funded', responsible: 'TC', days_from_acceptance: 0, category: 'Finance', required: true },
+  { phase: 'Closing', task: 'Deed recorded with county clerk', responsible: 'TC', days_from_acceptance: 0, category: 'Title', required: true },
+  { phase: 'Closing', task: 'Keys transferred to buyer', responsible: 'Listing Agent', days_from_acceptance: 0, category: 'Possession', required: true },
+  { phase: 'Closing', task: 'Send closing confirmation to all parties', responsible: 'TC', days_from_acceptance: 0, category: 'Communication', required: true },
+  { phase: 'Post-Closing', task: 'Upload final Settlement Statement', responsible: 'TC', days_from_acceptance: 1, category: 'Documents', required: true },
+  { phase: 'Post-Closing', task: 'Confirm all documents in file', responsible: 'TC', days_from_acceptance: 3, category: 'Documents', required: true },
+  { phase: 'Post-Closing', task: 'Submit file to broker for review', responsible: 'TC', days_from_acceptance: 3, category: 'Compliance', required: true },
+]
+
+export const flSellerTasks = [
+  { phase: 'Contract Received', task: 'Change MLS status to Pending', responsible: 'Listing Agent', days_from_acceptance: 1, category: 'MLS', required: true },
+  { phase: 'Disclosures', task: 'Ensure Seller Property Disclosure is complete', responsible: 'Listing Agent', days_from_acceptance: 3, category: 'FL Required Disclosure', required: true },
+  { phase: 'Pre-Closing', task: 'Order home warranty if per contract', responsible: 'TC', days_from_acceptance: -5, category: 'Admin', required: true },
+  { phase: 'Closing', task: 'Confirm documentary stamp tax paid on deed', responsible: 'TC', days_from_acceptance: 0, category: 'FL Required', required: true },
+]
+
+export const flBuyerTasks = [
+  { phase: 'Contract Received', task: 'Send Buyer Welcome Letter with escrow info', responsible: 'TC', days_from_acceptance: 1, category: 'Communication', required: true },
+  { phase: 'Contract Received', task: 'Instructions to buyer on escrow deposit', responsible: 'TC', days_from_acceptance: 1, category: 'Finance', required: true },
+  { phase: 'Loan & Appraisal', task: 'Confirm buyer submitted loan application', responsible: 'TC', days_from_acceptance: 3, category: 'Finance', required: true },
+  { phase: 'Loan & Appraisal', task: 'Appraisal ordered by lender', responsible: 'Lender', days_from_acceptance: 7, category: 'Appraisal', required: true },
+  { phase: 'Loan & Appraisal', task: 'Appraisal completed and reviewed', responsible: 'TC', days_from_acceptance: 14, category: 'Appraisal', required: true },
+  { phase: 'Loan & Appraisal', task: 'Final loan approval (clear to close)', responsible: 'Lender', days_from_acceptance: 21, category: 'Finance', required: true },
+  { phase: 'Pre-Closing', task: 'Have buyer set up utilities', responsible: 'TC', days_from_acceptance: -7, category: 'Communication', required: true },
+]

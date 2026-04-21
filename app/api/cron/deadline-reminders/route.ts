@@ -106,7 +106,7 @@ export async function GET(req: Request) {
 
     try {
       await resend.emails.send({
-        from: 'Klovex <noreply@klovex.app>',
+        from: 'Klovex <onboarding@resend.dev>',
         to: email,
         subject,
         html: `
