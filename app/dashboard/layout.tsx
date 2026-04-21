@@ -3,7 +3,6 @@ import { createServerClient2 } from '@/lib/supabase-server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import ProductTour from '@/components/dashboard/ProductTour'
 import HelpGuide from '@/components/dashboard/HelpGuide'
-import NotificationBell from '@/components/dashboard/NotificationBell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerClient2()
@@ -16,7 +15,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0">{children}</main>
       <ProductTour />
       <HelpGuide />
-      <NotificationBell />
     </div>
   )
 }

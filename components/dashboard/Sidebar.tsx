@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, FileText, FolderOpen, Receipt, LogOut, Settings, Users, Home, Zap, Shield, Menu, X } from 'lucide-react'
+import NotificationBell from '@/components/dashboard/NotificationBell'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/types/database'
@@ -49,8 +50,9 @@ export default function Sidebar({ profile }: SidebarProps) {
   return (
     <>
       <aside className="hidden md:flex w-56 bg-white border-r border-gray-100 flex-col h-full">
-        <div className="px-5 py-5 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <span className="font-serif text-xl">Klovex<span className="text-brand-500">.</span></span>
+          <NotificationBell />
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5"><NavLinks /></nav>
         <div className="px-3 py-4 border-t border-gray-100 space-y-0.5">
@@ -66,7 +68,10 @@ export default function Sidebar({ profile }: SidebarProps) {
 
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 flex items-center justify-between px-4 py-3">
         <span className="font-serif text-lg">Klovex<span className="text-brand-500">.</span></span>
-        <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-gray-100"><Menu size={20} className="text-gray-600" /></button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-gray-100"><Menu size={20} className="text-gray-600" /></button>
+        </div>
       </div>
 
       {mobileOpen && (

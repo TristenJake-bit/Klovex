@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Bell, X, CheckCheck, FileText, AlertTriangle, Calendar, TrendingUp, Mail } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,6 +17,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const bellRef = useRef<HTMLButtonElement>(null)
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -28,7 +29,6 @@ export default function NotificationBell() {
     } catch {}
   }, [])
 
-  // Poll every 30 seconds
   useEffect(() => {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 30000)
@@ -70,11 +70,11 @@ export default function NotificationBell() {
   }
 
   return (
-    <>
-      {/* Bell Button — positioned in mobile header and desktop sidebar area */}
+    <div className="relative">
       <button
+        ref={bellRef}
         onClick={() => { setOpen(!open); if (!open) fetchNotifications() }}
-        className="fixed top-3.5 right-14 md:top-5 md:left-44 z-40 p-2 rounded-lg hover:bg-gray-100 transition-colors bg-white md:bg-transparent"
+        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-gray-600" />
@@ -85,12 +85,10 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Notification Panel */}
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="fixed top-14 right-4 md:top-16 md:left-14 z-50 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] flex flex-col">
-            {/* Header */}
+          <div className="absolute left-0 md:left-auto md:right-0 top-full mt-2 z-50 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[70vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
               <div className="flex items-center gap-2">
@@ -105,7 +103,6 @@ export default function NotificationBell() {
               </div>
             </div>
 
-            {/* Notifications List */}
             <div className="flex-1 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="px-5 py-12 text-center">
@@ -152,6 +149,6 @@ export default function NotificationBell() {
           </div>
         </>
       )}
-    </>
+    </div>
   )
 }
