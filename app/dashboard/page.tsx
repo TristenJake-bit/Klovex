@@ -1,8 +1,9 @@
 import { createServerClient2 } from "@/lib/supabase-server"
 import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS } from '@/lib/utils'
 import Link from 'next/link'
-import { ArrowRight, Plus, FileText, Clock, AlertTriangle, CheckCircle, Calendar, Phone, Zap } from 'lucide-react'
+import { ArrowRight, Plus, FileText, Clock, AlertTriangle, CheckCircle, Calendar, Phone, Zap, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import SeedDemoButton from '@/components/dashboard/SeedDemoButton'
 
 export default async function DashboardPage() {
   const supabase = await createServerClient2()
@@ -130,6 +131,14 @@ export default async function DashboardPage() {
                 )}
               </div>
             ))}
+          </div>
+          <div className="mt-4 flex items-center gap-3 bg-purple-50 rounded-xl p-4 border border-purple-200">
+            <Sparkles className="w-4 h-4 text-purple-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800">Or explore with sample data first</p>
+              <p className="text-xs text-gray-500 mt-0.5">Load a realistic demo transaction to see how everything works</p>
+            </div>
+            <SeedDemoButton />
           </div>
         </div>
       )}

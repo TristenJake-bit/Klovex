@@ -1,7 +1,8 @@
 import { createServerClient2 } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, FileText, Brain, Clock, ArrowRight } from 'lucide-react'
+import { CheckCircle, FileText, Brain, Clock, ArrowRight, Sparkles } from 'lucide-react'
+import SeedDemoButton from '@/components/dashboard/SeedDemoButton'
 
 export default async function WelcomePage() {
   const supabase = await createServerClient2()
@@ -47,7 +48,7 @@ export default async function WelcomePage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold text-gray-900">Start your first transaction</p>
-              <p className="text-gray-500 text-sm mt-0.5">One-time fee of $299 per transaction. No subscriptions.</p>
+              <p className="text-gray-500 text-sm mt-0.5">Enter your property details to get started.</p>
             </div>
             <Link href="/dashboard/transactions/new" className="btn-primary flex items-center gap-2 px-6 py-3 flex-shrink-0">
               Get started <ArrowRight className="w-4 h-4" />
@@ -55,9 +56,24 @@ export default async function WelcomePage() {
           </div>
         </div>
 
+        <div className="card p-5 mb-4 bg-purple-50/50 border border-purple-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">Want to explore first?</p>
+                <p className="text-gray-500 text-xs mt-0.5">Load a sample transaction with realistic data — checklists, contacts, timeline, and AI analysis included.</p>
+              </div>
+            </div>
+            <SeedDemoButton />
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 text-xs text-gray-400 justify-center">
           <CheckCircle className="w-3.5 h-3.5 text-brand-400" />
-          <span>California-compliant · AI-powered · Available 24/7</span>
+          <span>Multi-state compliant · AI-powered · Available 24/7</span>
         </div>
 
         <p className="text-center mt-4">
