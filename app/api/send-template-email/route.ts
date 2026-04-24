@@ -4,9 +4,12 @@ import { sendWelcomeEmail, sendClosingConfirmationEmail } from '@/lib/email-temp
 import { createNotification } from '@/lib/notify'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
+  const authClient = await createServerClient2()
+  const { data: { session } } = await authClient.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   const { template, transactionId } = await req.json()
   if (!template || !transactionId) {

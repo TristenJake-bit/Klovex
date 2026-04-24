@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST() {
-  const supabase = await createServerClient2()
-  const { data: { user } } = await supabase.auth.getUser()
+  const authClient = await createServerClient2()
+  const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   // Check if demo already exists
   const { data: existing } = await (supabase as any)

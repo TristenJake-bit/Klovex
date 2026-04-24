@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { sendAgentAlert } from '@/lib/email'
 import { createNotification } from '@/lib/notify'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
+  const authClient = await createServerClient2()
+  const { data: { session } } = await authClient.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Use service role for DB writes to bypass RLS (user is already authenticated above)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { documentId, documentUrl, documentName, transactionId } = await req.json()
   if (!documentUrl) return NextResponse.json({ error: 'No document URL' }, { status: 400 })

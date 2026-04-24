@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { txSharedTasks, txSellerTasks, txBuyerTasks } from '@/lib/checklists/texas'
 import { flSharedTasks, flSellerTasks, flBuyerTasks } from '@/lib/checklists/florida'
 import { generalSharedTasks, generalSellerTasks, generalBuyerTasks } from '@/lib/checklists/general'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
+  const authClient = await createServerClient2()
+  const { data: { session } } = await authClient.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { transactionId, acceptanceDate, closingDate, propertyAddress, transactionType, state, yearBuilt, hasHOA, isSeptic } = await req.json()
   if (!transactionId) return NextResponse.json({ error: 'No transactionId' }, { status: 400 })

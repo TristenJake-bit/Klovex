@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient2 } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
 // POST — generate a portal token for a transaction
 export async function POST(req: NextRequest) {
-  const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
+  const authClient = await createServerClient2()
+  const { data: { session } } = await authClient.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   const { transactionId } = await req.json()
   if (!transactionId) return NextResponse.json({ error: 'Missing transactionId' }, { status: 400 })
@@ -47,9 +50,11 @@ export async function POST(req: NextRequest) {
 
 // DELETE — revoke a portal token
 export async function DELETE(req: NextRequest) {
-  const supabase = await createServerClient2()
-  const { data: { session } } = await supabase.auth.getSession()
+  const authClient2 = await createServerClient2()
+  const { data: { session } } = await authClient2.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
   const { transactionId } = await req.json()
   if (!transactionId) return NextResponse.json({ error: 'Missing transactionId' }, { status: 400 })
