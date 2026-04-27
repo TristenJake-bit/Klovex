@@ -56,7 +56,7 @@ export default async function PlansPage() {
       features: [] as string[],
       addOn: null as string | null,
       cta: "Book a call",
-      href: "mailto:solitudeconnections@gmail.com?subject=Custom Plan",
+      href: "mailto:support@klovex.app?subject=Custom Plan",
       featured: false,
       badge: "High volume",
       locked: true,
@@ -137,7 +137,7 @@ export default async function PlansPage() {
             <p className="text-xs text-gray-400">High-volume agents and brokerages, reach out and we will get you set up.</p>
           </div>
         </div>
-        <a href="mailto:solitudeconnections@gmail.com?subject=Custom Plan" className="btn-primary text-sm px-5 py-2 flex-shrink-0">
+        <a href="mailto:support@klovex.app?subject=Custom Plan" className="btn-primary text-sm px-5 py-2 flex-shrink-0">
           Contact us
         </a>
       </div>

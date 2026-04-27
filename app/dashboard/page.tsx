@@ -160,7 +160,7 @@ export default async function DashboardPage() {
               <p className="text-xs text-brand-600 mt-0.5">You have completed 6+ transactions this month. We offer custom plans with better per-deal pricing.</p>
             </div>
           </div>
-          <a href="mailto:solitudeconnections@gmail.com?subject=Custom Plan Inquiry" className="btn-primary text-sm px-4 py-2 flex-shrink-0 whitespace-nowrap">Contact us</a>
+          <a href="mailto:support@klovex.app?subject=Custom Plan Inquiry" className="btn-primary text-sm px-4 py-2 flex-shrink-0 whitespace-nowrap">Contact us</a>
         </div>
       )}
 

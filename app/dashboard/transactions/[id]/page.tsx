@@ -83,22 +83,18 @@ export default function TransactionDetailPage() {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setUploading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
     for (const file of files) {
       try {
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-        const filePath = `${id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`
-        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file)
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath)
-          const { data: docData } = await (supabase as any).from('documents').insert({ transaction_id: id, name: file.name, url: publicUrl, uploaded_by: user?.id, file_type: file.type, file_size: file.size }).select().single()
-          if (docData) {
-            setDocuments((prev) => [docData, ...prev])
-            analyzeDocument(docData.id, publicUrl, file.name, id)
-          }
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('transactionId', id)
+        const res = await fetch('/api/upload-document', { method: 'POST', body: formData })
+        const data = await res.json()
+        if (data.document) {
+          setDocuments((prev) => [data.document, ...prev])
+          analyzeDocument(data.document.id, data.document.url, file.name, id)
         } else {
-          console.error('Upload error for', file.name, uploadError)
+          console.error('Upload error for', file.name, data.error)
         }
       } catch (err) {
         console.error('Failed to upload', file.name, err)

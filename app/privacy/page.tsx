@@ -42,7 +42,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Data Deletion</h2>
-            <p>You can request full deletion of your account and all associated data at any time by emailing <a href="mailto:solitudeconnections@gmail.com" className="text-brand-500 hover:text-brand-600 underline">solitudeconnections@gmail.com</a>. We'll process your request within 30 days.</p>
+            <p>You can request full deletion of your account and all associated data at any time by emailing <a href="mailto:support@klovex.app" className="text-brand-500 hover:text-brand-600 underline">support@klovex.app</a>. We'll process your request within 30 days.</p>
           </section>
         </div>
       </div>

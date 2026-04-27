@@ -41,7 +41,7 @@ const HELP_CONTENT: Record<string, PageHelp> = {
     steps: [
       { title: 'What do the status colors mean?', body: 'Yellow = Pending, Blue = Contract, Purple = Inspection, Indigo = Loan, Teal = Closing, Green = Closed, Red = Cancelled.' },
       { title: 'How do I find a specific deal?', body: 'Transactions are sorted by most recent. Look for the property address or use the status to narrow things down.' },
-      { title: 'Can I delete a transaction?', body: 'Not directly from here. If you need to remove a deal, contact support at solitudeconnections@gmail.com.' },
+      { title: 'Can I delete a transaction?', body: 'Not directly from here. If you need to remove a deal, contact support at support@klovex.app.' },
     ],
   },
   'transaction-overview': {
@@ -188,7 +188,7 @@ export default function HelpGuide() {
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
-              <a href="mailto:solitudeconnections@gmail.com?subject=Help Request" className="flex items-center gap-2 text-xs text-gray-500 hover:text-brand-600 transition-colors">
+              <a href="mailto:support@klovex.app?subject=Help Request" className="flex items-center gap-2 text-xs text-gray-500 hover:text-brand-600 transition-colors">
                 Still need help? <span className="font-medium">Contact us</span> <ArrowRight className="w-3 h-3" />
               </a>
             </div>
