@@ -17,9 +17,17 @@ export default async function DashboardPage() {
   const planLabel = plan === 'starter' ? 'Starter' : plan === 'growth' ? 'Growth' : 'Custom'
   const addonPrice = plan === 'growth' ? 249 : plan === 'custom' ? 199 : 299
 
-  const txQuery = supabase.from('transactions').select('*, profiles(full_name, email)').order('created_at', { ascending: false })
-  if (!isAdmin) txQuery.eq('client_id', session!.user.id)
-  const { data: transactionsRaw } = await txQuery
+  // Admin needs service role to see all transactions (RLS scopes to own data)
+  let transactionsRaw: any[] | null = null
+  if (isAdmin) {
+    const { createClient } = await import('@supabase/supabase-js')
+    const adminDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const { data } = await adminDb.from('transactions').select('*, profiles(full_name, email)').order('created_at', { ascending: false })
+    transactionsRaw = data
+  } else {
+    const { data } = await supabase.from('transactions').select('*, profiles(full_name, email)').eq('client_id', session!.user.id).order('created_at', { ascending: false })
+    transactionsRaw = data
+  }
   const transactions = (transactionsRaw as any[]) || []
   const active = transactions.filter(t => !['closed', 'cancelled'].includes(t.status))
 

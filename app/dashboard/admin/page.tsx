@@ -1,4 +1,5 @@
 import { createServerClient2 } from "@/lib/supabase-server"
+import { createClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 import { Shield, Users } from "lucide-react"
 import AdminUserTable from "@/components/dashboard/AdminUserTable"
@@ -9,7 +10,9 @@ export default async function AdminPage() {
   if (!session) redirect("/auth/login")
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single<{ role: string }>()
   if (profile?.role !== 'admin') redirect("/dashboard")
-  const { data: users } = await supabase.from('profiles').select('id, full_name, email, role, plan, transactions_used, created_at').order('created_at', { ascending: false })
+  // Use service role to see all users (RLS restricts profiles to own user)
+  const adminDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const { data: users } = await adminDb.from('profiles').select('id, full_name, email, role, plan, transactions_used, created_at').order('created_at', { ascending: false })
   return (
     <div className="p-8 max-w-5xl">
       <div className="mb-8">
