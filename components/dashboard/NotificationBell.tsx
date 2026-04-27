@@ -17,6 +17,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const bellRef = useRef<HTMLButtonElement>(null)
 
   const fetchNotifications = useCallback(async () => {
@@ -115,10 +116,14 @@ export default function NotificationBell() {
                   {notifications.map((n: any) => {
                     const config = TYPE_CONFIG[n.type] || TYPE_CONFIG.system
                     const Icon = config.icon
+                    const isExpanded = expandedId === n.id
                     return (
                       <div
                         key={n.id}
-                        onClick={() => { if (!n.read) markRead(n.id) }}
+                        onClick={() => {
+                          if (!n.read) markRead(n.id)
+                          setExpandedId(isExpanded ? null : n.id)
+                        }}
                         className={`px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer ${!n.read ? 'bg-brand-50/30' : ''}`}
                       >
                         <div className="flex gap-3">
@@ -127,16 +132,18 @@ export default function NotificationBell() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-700'} line-clamp-1`}>{n.title}</p>
+                              <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-700'} ${isExpanded ? '' : 'line-clamp-1'}`}>{n.title}</p>
                               {!n.read && <div className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0 mt-1.5" />}
                             </div>
-                            {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
+                            {n.body && (
+                              <p className={`text-xs text-gray-500 mt-0.5 ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>{n.body}</p>
+                            )}
                             <p className="text-xs text-gray-400 mt-1">{fmt(n.created_at)}</p>
                           </div>
                         </div>
-                        {n.transaction_id && (
+                        {isExpanded && n.transaction_id && (
                           <Link href={`/dashboard/transactions/${n.transaction_id}`} onClick={(e) => { e.stopPropagation(); setOpen(false) }}
-                            className="text-xs text-brand-500 hover:text-brand-600 font-medium mt-1.5 ml-11 inline-block">
+                            className="text-xs text-brand-500 hover:text-brand-600 font-medium mt-2 ml-11 inline-block">
                             View transaction →
                           </Link>
                         )}
