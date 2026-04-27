@@ -19,14 +19,17 @@ export default function AdminUserTable({ users }: { users: any[] }) {
 
   async function updateUser(userId: string, field: 'plan' | 'transactions_used', value: string | number) {
     setSaving(userId + field)
-    const supabase = createClient()
     const updateData: any = { [field]: value }
     if (field === 'plan' && (value === 'growth' || value === 'custom')) {
       updateData.plan_period_start = new Date().toISOString()
       updateData.transactions_used = 0
     }
-    await (supabase as any).from('profiles').update(updateData).eq('id', userId)
-    setLocalUsers(prev => prev.map(u => u.id === userId ? { ...u, [field]: value } : u))
+    await fetch('/api/admin/update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, updateData }),
+    })
+    setLocalUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updateData } : u))
     setSaving(null)
     setSaved(userId + field)
     setTimeout(() => setSaved(null), 2000)
