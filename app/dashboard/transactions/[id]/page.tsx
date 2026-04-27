@@ -229,6 +229,36 @@ export default function TransactionDetailPage() {
     setTimeout(() => setPortalCopied(false), 2000)
   }
 
+  async function deleteDocument(docId: string) {
+    if (!confirm('Delete this document and its analysis? This cannot be undone.')) return
+    try {
+      await fetch('/api/delete-document', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: docId }) })
+      setDocuments(prev => prev.filter(d => d.id !== docId))
+      setAnalyses(prev => { const next = { ...prev }; delete next[docId]; return next })
+      if (expandedAnalysis === docId) setExpandedAnalysis(null)
+    } catch (err) { console.error('Failed to delete document:', err) }
+  }
+
+  async function replaceDocument(docId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Delete old document
+    await fetch('/api/delete-document', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: docId }) })
+    setDocuments(prev => prev.filter(d => d.id !== docId))
+    setAnalyses(prev => { const next = { ...prev }; delete next[docId]; return next })
+    // Upload new document
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('transactionId', id)
+    const res = await fetch('/api/upload-document', { method: 'POST', body: formData })
+    const data = await res.json()
+    if (data.document) {
+      setDocuments(prev => [data.document, ...prev])
+      analyzeDocument(data.document.id, data.document.url, file.name, id)
+    }
+    e.target.value = ''
+  }
+
   async function compareDocuments() {
     setComparing(true)
     setComparisonResult(null)
@@ -635,6 +665,11 @@ export default function TransactionDetailPage() {
                       )}
                       <button onClick={() => analyzeDocument(doc.id, doc.url, doc.name, id)} className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors" disabled={isAnalyzing}><Brain className="w-3 h-3" />{analysis ? 'Re-analyze' : 'Analyze'}</button>
                       <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-brand-600 px-3 py-1.5 border border-gray-200 rounded-full transition-colors">View</a>
+                      <label className="text-xs text-orange-600 hover:text-orange-700 px-3 py-1.5 border border-orange-200 rounded-full transition-colors cursor-pointer bg-orange-50 hover:bg-orange-100 flex items-center gap-1">
+                        <ArrowRight className="w-3 h-3 rotate-90" />Replace
+                        <input type="file" className="hidden" onChange={(e) => replaceDocument(doc.id, e)} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                      </label>
+                      <button onClick={() => deleteDocument(doc.id)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" /></button>
                       {analysis && <button onClick={() => setExpandedAnalysis(isExpanded ? null : doc.id)} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors">{isExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}</button>}
                     </div>
                   </div>
