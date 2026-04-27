@@ -31,7 +31,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Contact</h2>
-            <p>Questions about these terms? Reach out at <a href="mailto:hello@klovex.app" className="text-brand-500 hover:text-brand-600 underline">hello@klovex.app</a>.</p>
+            <p>Questions about these terms? Reach out at <a href="mailto:solitudeconnections@gmail.com" className="text-brand-500 hover:text-brand-600 underline">solitudeconnections@gmail.com</a>.</p>
           </section>
         </div>
       </div>

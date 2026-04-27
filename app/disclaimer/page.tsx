@@ -36,7 +36,7 @@ export default function DisclaimerPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Questions?</h2>
-            <p>If you have questions about this disclaimer, contact us at <a href="mailto:hello@klovex.app" className="text-brand-500 hover:text-brand-600 underline">hello@klovex.app</a>.</p>
+            <p>If you have questions about this disclaimer, contact us at <a href="mailto:solitudeconnections@gmail.com" className="text-brand-500 hover:text-brand-600 underline">solitudeconnections@gmail.com</a>.</p>
           </section>
         </div>
       </div>

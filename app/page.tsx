@@ -199,7 +199,7 @@ export default function HomePage() {
           </div>
           <div className="flex gap-3 flex-shrink-0">
             <Link href="/auth/signup" className="btn-primary py-3 px-8 text-base">Get started</Link>
-            <a href="mailto:hello@klovex.io" className="btn-secondary py-3 px-8 text-base bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800">
+            <a href="mailto:solitudeconnections@gmail.com" className="btn-secondary py-3 px-8 text-base bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800">
               Book a demo
             </a>
           </div>
@@ -215,7 +215,7 @@ export default function HomePage() {
             <a href="/privacy" className="hover:text-gray-600">Privacy</a>
             <a href="/terms" className="hover:text-gray-600">Terms</a>
             <a href="/disclaimer" className="hover:text-gray-600">Disclaimer</a>
-            <a href="mailto:hello@klovex.app" className="hover:text-gray-600">Contact</a>
+            <a href="mailto:solitudeconnections@gmail.com" className="hover:text-gray-600">Contact</a>
           </div>
         </div>
       </footer>
