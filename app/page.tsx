@@ -148,19 +148,19 @@ export default function HomePage() {
         <div className="grid md:grid-cols-3 gap-5">
           {[
             {
-              name: 'Starter', price: '$350', per: 'per transaction',
-              features: ['Full TC coordination', 'Document portal', 'Deadline tracking', 'Email notifications'],
-              featured: false,
+              name: 'Starter', price: '$299', per: 'per month',
+              features: ['Unlimited transactions', 'AI document analysis', 'Multi-state checklists', 'Daily deadline reminders'],
+              featured: false, cta: 'Get started', href: '/auth/signup',
             },
             {
-              name: 'Growth', price: '$1,800', per: 'per month · up to 6 transactions',
-              features: ['Everything in Starter', 'Priority support', 'AI document extraction', 'Client-facing portal'],
-              featured: true,
+              name: 'Growth', price: '$799', per: 'per month · 4 transactions included',
+              features: ['Everything in Starter', 'Additional deals at $249 each', 'AI document comparison', 'Priority support'],
+              featured: true, cta: 'Get started', href: '/auth/signup',
             },
             {
-              name: 'Scale', price: '$2,400', per: 'per month · unlimited transactions',
-              features: ['Everything in Growth', 'Dedicated TC manager', 'Team access', 'Custom onboarding'],
-              featured: false,
+              name: 'Custom', price: 'Talk to us', per: 'built around your volume',
+              features: ['Tailored pricing', 'Dedicated account manager', 'Team access', 'Custom onboarding'],
+              featured: false, cta: 'Contact us', href: 'mailto:support@klovex.app?subject=Custom Plan',
             },
           ].map(plan => (
             <div key={plan.name} className={`card p-7 relative ${plan.featured ? 'ring-2 ring-brand-500' : ''}`}>
@@ -180,9 +180,15 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/signup" className={`block text-center py-2.5 rounded-lg text-sm font-medium transition-colors ${plan.featured ? 'btn-primary' : 'btn-secondary'}`}>
-                Get started
-              </Link>
+              {plan.href.startsWith('mailto') ? (
+                <a href={plan.href} className="block text-center py-2.5 rounded-lg text-sm font-medium transition-colors btn-secondary">
+                  {plan.cta}
+                </a>
+              ) : (
+                <Link href={plan.href} className={`block text-center py-2.5 rounded-lg text-sm font-medium transition-colors ${plan.featured ? 'btn-primary' : 'btn-secondary'}`}>
+                  {plan.cta}
+                </Link>
+              )}
             </div>
           ))}
         </div>
