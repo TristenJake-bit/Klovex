@@ -29,6 +29,9 @@ export default function TransactionDetailPage() {
   const [portalToken, setPortalToken] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalCopied, setPortalCopied] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ purchase_price: '', closing_date: '', transaction_type: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
   function switchTab(tab: typeof activeTab) {
     setActiveTab(tab)
     window.dispatchEvent(new CustomEvent('help-tab-change', { detail: tab }))
@@ -72,6 +75,28 @@ export default function TransactionDetailPage() {
       fetch('/api/send-template-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: 'closing_confirmation', transactionId: id }) }).catch(() => {})
     }
   }
+  function startEditing() {
+    setEditForm({
+      purchase_price: tx?.purchase_price?.toString() || '',
+      closing_date: tx?.closing_date || '',
+      transaction_type: tx?.transaction_type || 'purchase',
+    })
+    setEditing(true)
+  }
+
+  async function saveEdit() {
+    setSavingEdit(true)
+    const supabase = createClient()
+    const updates: any = {}
+    if (editForm.purchase_price) updates.purchase_price = parseFloat(editForm.purchase_price)
+    if (editForm.closing_date) updates.closing_date = editForm.closing_date
+    if (editForm.transaction_type) updates.transaction_type = editForm.transaction_type
+    await (supabase as any).from('transactions').update(updates).eq('id', id)
+    setTx((t: any) => ({ ...t, ...updates }))
+    setEditing(false)
+    setSavingEdit(false)
+  }
+
   async function addNote(e: React.FormEvent) {
     e.preventDefault(); if (!note.trim()) return; setSavingNote(true)
     const supabase = createClient()
@@ -412,8 +437,8 @@ export default function TransactionDetailPage() {
       })()}
 
       <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
-        <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
-        <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
+        <div className="card p-3 md:p-5 cursor-pointer hover:border-brand-200 transition-colors" onClick={startEditing}><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
+        <div className="card p-3 md:p-5 cursor-pointer hover:border-brand-200 transition-colors" onClick={startEditing}><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Status</p>
           <select className="text-sm font-medium bg-transparent border-0 p-0 text-gray-900 cursor-pointer focus:outline-none w-full" value={tx.status} onChange={e => handleStatusChange(e.target.value)}>
             <option value="pending">Pending</option><option value="contract">Contract</option><option value="inspection">Inspection</option><option value="loan">Loan & Appraisal</option><option value="closing">Closing</option><option value="closed">Closed</option><option value="cancelled">Cancelled</option>
@@ -494,13 +519,46 @@ export default function TransactionDetailPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="card p-4 md:p-6">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Home className="w-4 h-4 text-brand-500" /> Property Details</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">Address</span><span className="text-gray-900 font-medium">{tx.property_address}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-900 font-medium capitalize">{tx.transaction_type}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Purchase price</span><span className="text-gray-900 font-medium">{fmtMoney(tx.purchase_price)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Close date</span><span className="text-gray-900 font-medium">{fmt(tx.closing_date)}</span></div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Home className="w-4 h-4 text-brand-500" /> Property Details</h2>
+            {!editing ? (
+              <button onClick={startEditing} className="text-xs text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button onClick={saveEdit} disabled={savingEdit} className="text-xs bg-brand-500 hover:bg-brand-600 text-white px-3 py-1 rounded-lg font-medium">{savingEdit ? 'Saving...' : 'Save'}</button>
+                <button onClick={() => setEditing(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+              </div>
+            )}
           </div>
+          {editing ? (
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center"><span className="text-gray-500">Address</span><span className="text-gray-900 font-medium text-right max-w-48 truncate">{tx.property_address}</span></div>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-gray-500 flex-shrink-0">Type</span>
+                <select className="input text-sm py-1 w-36 text-right" value={editForm.transaction_type} onChange={e => setEditForm(f => ({ ...f, transaction_type: e.target.value }))}>
+                  <option value="purchase">Purchase</option><option value="sale">Sale</option><option value="refinance">Refinance</option><option value="lease">Lease</option>
+                </select>
+              </div>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-gray-500 flex-shrink-0">Purchase price</span>
+                <div className="relative w-36">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input type="number" className="input text-sm py-1 pl-6 text-right w-full" value={editForm.purchase_price} onChange={e => setEditForm(f => ({ ...f, purchase_price: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-gray-500 flex-shrink-0">Close date</span>
+                <input type="date" className="input text-sm py-1 w-36 text-right" value={editForm.closing_date} onChange={e => setEditForm(f => ({ ...f, closing_date: e.target.value }))} />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Address</span><span className="text-gray-900 font-medium text-right max-w-48 truncate">{tx.property_address}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-900 font-medium capitalize">{tx.transaction_type}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Purchase price</span><span className="text-gray-900 font-medium">{fmtMoney(tx.purchase_price)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Close date</span><span className="text-gray-900 font-medium">{fmt(tx.closing_date)}</span></div>
+            </div>
+          )}
         </div>
         <div className="card p-4 md:p-6">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-brand-500" /> Quick Stats</h2>

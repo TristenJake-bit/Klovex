@@ -27,7 +27,23 @@ export async function POST(req: NextRequest) {
     
     let messageContent: any[]
     
-    const analysisPrompt = `You are an expert real estate transaction coordinator. Analyze this document carefully and respond ONLY with valid JSON (no markdown) with this structure: {"summary":"2-3 sentence summary","parties":{"buyer":null,"seller":null,"buyerAgent":null,"sellerAgent":null,"titleCompany":null,"lender":null},"keyTerms":{"purchasePrice":null,"closingDate":null,"earnestMoney":null,"downPayment":null,"loanAmount":null,"propertyAddress":null,"propertyType":null},"contingencies":[{"name":"string","deadline":null,"status":"pending"}],"criticalDates":[{"label":"string","date":"string","daysUntil":0}],"actionItems":[{"priority":"high","task":"string","responsible":"agent"}],"risks":[{"severity":"high","issue":"string"}],"documentType":"Purchase Agreement","completionScore":85,"completenessIssues":[{"type":"missing_signature","description":"string","severity":"high"}],"transactionUpdates":{"property_address":null,"purchase_price":null,"closing_date":null,"status":null}} Today is ${new Date().toISOString().split('T')[0]}. IMPORTANT: Read every word of this document. Extract ACTUAL values you find — real names, real dates, real dollar amounts. Do NOT use placeholder or example values. For transactionUpdates, extract actual values from the document — purchase_price as a number (e.g. 742500), closing_date as YYYY-MM-DD (e.g. 2026-04-28), property_address as a full string, status as one of: pending, contract, inspection, closed, cancelled. Only include fields you found, leave others as null. For completenessIssues, check for: missing_signature (unsigned fields, missing initials), missing_date (blank date fields), blank_field (required fields left empty), inconsistency (conflicting info like mismatched names, prices, or dates). Severity is "high" for missing signatures and critical blank fields, "medium" for minor issues. Return an empty array if no issues found.`
+    const analysisPrompt = `You are an expert real estate transaction coordinator. Read this ENTIRE document from start to finish — every page, every paragraph, every line. Respond ONLY with valid JSON (no markdown) using this structure:
+
+{"summary":"2-3 sentence summary","parties":{"buyer":null,"seller":null,"buyerAgent":null,"sellerAgent":null,"titleCompany":null,"lender":null},"keyTerms":{"purchasePrice":null,"closingDate":null,"earnestMoney":null,"downPayment":null,"loanAmount":null,"propertyAddress":null,"propertyType":null},"contingencies":[{"name":"string","deadline":null,"status":"pending"}],"criticalDates":[{"label":"string","date":"string","daysUntil":0}],"actionItems":[{"priority":"high","task":"string","responsible":"agent"}],"risks":[{"severity":"high","issue":"string"}],"documentType":"Purchase Agreement","completionScore":85,"completenessIssues":[{"type":"missing_signature","description":"string","severity":"high"}],"transactionUpdates":{"property_address":null,"purchase_price":null,"closing_date":null,"status":null,"acceptance_date":null}}
+
+Today is ${new Date().toISOString().split('T')[0]}.
+
+CRITICAL INSTRUCTIONS:
+1. Read EVERY PAGE of this document. Do not skip any sections.
+2. Extract ACTUAL values — real names, real dates, real dollar amounts from the document. NEVER use placeholder or example values.
+3. For dates: Look for closing date, close of escrow date, settlement date, or any date labeled as the expected closing. Convert ALL dates to YYYY-MM-DD format. Search the entire document for any mention of closing, settlement, or escrow close dates.
+4. For acceptance_date: Look for the date the contract was accepted, executed, or signed by all parties. Convert to YYYY-MM-DD.
+5. For purchase_price: Extract as a plain number (e.g. 742500, not "$742,500").
+6. For property_address: Extract the full street address including city, state, and ZIP if available.
+7. For status: Set to "contract" if this is an executed purchase agreement.
+8. For criticalDates: Calculate daysUntil from today (${new Date().toISOString().split('T')[0]}). Include ALL deadlines: inspection, loan approval, appraisal, contingency removals, closing.
+9. For completenessIssues: Check for missing_signature, missing_date, blank_field, inconsistency. Severity "high" for missing signatures and critical blank fields.
+10. Only include fields you actually found in the document. Leave others as null.`
 
     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName)
 
@@ -56,7 +72,7 @@ export async function POST(req: NextRequest) {
     const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY!, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 2000, messages: [{ role: 'user', content: messageContent }] })
+      body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 4096, messages: [{ role: 'user', content: messageContent }] })
     })
 
     const anthropicData = await anthropicResponse.json()
@@ -91,6 +107,10 @@ export async function POST(req: NextRequest) {
         if (updates.status && updates.status !== currentTx.status) {
           fieldsToUpdate.status = updates.status
           changes.push({ field: 'status', label: 'Status', from: currentTx.status, to: updates.status })
+        }
+        if (updates.acceptance_date && updates.acceptance_date !== currentTx.acceptance_date) {
+          fieldsToUpdate.acceptance_date = updates.acceptance_date
+          changes.push({ field: 'acceptance_date', label: 'Acceptance Date', from: currentTx.acceptance_date, to: updates.acceptance_date })
         }
 
         if (Object.keys(fieldsToUpdate).length > 0) {
