@@ -35,7 +35,11 @@ export default function AdminUserTable({ users }: { users: any[] }) {
     setTimeout(() => setSaved(null), 2000)
   }
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const fmt = (d: string) => {
+    const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
 
   return (
     <div className="divide-y divide-gray-100">

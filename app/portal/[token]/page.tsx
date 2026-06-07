@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Home, CheckCircle, Calendar, Clock, User, Building2, AlertTriangle, Loader2 } from 'lucide-react'
+import { formatDateOnly, daysFromToday } from '@/lib/dates'
 
 const STATUS_LABELS: Record<string, string> = { pending: 'Pending', contract: 'Under Contract', inspection: 'Inspection', loan: 'Loan & Appraisal', closing: 'Closing', closed: 'Closed', cancelled: 'Cancelled' }
 const STATUS_COLORS: Record<string, string> = { pending: 'bg-yellow-100 text-yellow-700', contract: 'bg-blue-100 text-blue-700', inspection: 'bg-purple-100 text-purple-700', loan: 'bg-indigo-100 text-indigo-700', closing: 'bg-teal-100 text-teal-700', closed: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700' }
@@ -25,7 +26,7 @@ export default function PortalPage() {
       .catch(() => { setError('Failed to load portal'); setLoading(false) })
   }, [token])
 
-  const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+  const fmt = (d: string) => formatDateOnly(d)
   const fmtMoney = (n: number) => n ? `$${n.toLocaleString()}` : '—'
 
   if (loading) return (
@@ -50,7 +51,7 @@ export default function PortalPage() {
   const tx = data.transaction
   const { progress, upcomingDeadlines, contacts, timeline } = data
 
-  const closingDays = tx.closing_date ? Math.ceil((new Date(tx.closing_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
+  const closingDays = tx.closing_date ? daysFromToday(tx.closing_date) : null
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { daysFromToday } from '@/lib/dates'
 
 // Public endpoint — no auth required, validates token and returns safe transaction data
 const supabase = createClient(
@@ -59,15 +60,10 @@ export async function GET(req: NextRequest) {
   const completedTasks = (checklist || []).filter((t: any) => t.completed).length
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
   const upcomingDeadlines = (checklist || [])
     .filter((t: any) => !t.completed && t.due_date)
     .map((t: any) => {
-      const due = new Date(t.due_date)
-      due.setHours(0, 0, 0, 0)
-      const daysUntil = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      return { task: t.task, phase: t.phase, dueDate: t.due_date, daysUntil }
+      return { task: t.task, phase: t.phase, dueDate: t.due_date, daysUntil: daysFromToday(t.due_date) }
     })
     .slice(0, 8)
 

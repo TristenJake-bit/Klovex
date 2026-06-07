@@ -28,10 +28,13 @@ export default function NewTransactionPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [profile, setProfile] = useState<any>(null)
+  const [checklistTemplates, setChecklistTemplates] = useState<any[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [form, setForm] = useState({
     address: '', city: '', state: 'CA', zip: '',
     transaction_type: 'purchase', status: 'active',
     purchase_price: '', closing_date: '', notes: '',
+    representation: 'buyer',
   })
 
   useEffect(() => {
@@ -43,6 +46,9 @@ export default function NewTransactionPage() {
         })
       }
     })
+    fetch('/api/checklist-templates').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setChecklistTemplates(data)
+    }).catch(() => {})
   }, [])
 
   const plan = profile?.plan || 'starter'
@@ -75,6 +81,7 @@ export default function NewTransactionPage() {
       closing_date: form.closing_date || null,
       notes: form.notes,
       state: form.state,
+      representation: form.representation,
     }
 
     if (hasIncluded) {
@@ -85,6 +92,22 @@ export default function NewTransactionPage() {
       await (supabase as any).from('profiles').update({ transactions_used: txUsed + 1 }).eq('id', user?.id)
       // Send welcome email
       fetch('/api/send-template-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ template: 'welcome', transactionId: tx.id }) }).catch(() => {})
+      // If a checklist template is selected, generate from it
+      if (selectedTemplateId) {
+        fetch('/api/generate-checklist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionId: tx.id,
+            acceptanceDate: null,
+            closingDate: form.closing_date || null,
+            transactionType: form.transaction_type,
+            state: form.state,
+            representation: form.representation,
+            templateId: selectedTemplateId,
+          }),
+        }).catch(() => {})
+      }
       router.push('/dashboard/transactions/' + tx.id + '?created=true&used=' + (txUsed + 1) + '&limit=' + planLimit)
       return
     }
@@ -164,7 +187,7 @@ export default function NewTransactionPage() {
                 <input type="text" className="input" placeholder="90210" value={form.zip} onChange={set('zip')} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="label">Transaction type</label>
                 <select className="input" value={form.transaction_type} onChange={set('transaction_type')}>
@@ -172,6 +195,14 @@ export default function NewTransactionPage() {
                   <option value="sale">Sale</option>
                   <option value="refinance">Refinance</option>
                   <option value="lease">Lease</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">You represent</label>
+                <select className="input" value={form.representation} onChange={set('representation')}>
+                  <option value="buyer">Buyer</option>
+                  <option value="seller">Seller</option>
+                  <option value="dual">Dual (Both)</option>
                 </select>
               </div>
               <div>
@@ -184,6 +215,20 @@ export default function NewTransactionPage() {
                 </select>
               </div>
             </div>
+            {checklistTemplates.length > 0 && (
+              <div>
+                <label className="label">Checklist template</label>
+                <select className="input" value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)}>
+                  <option value="">Default CA compliance checklist</option>
+                  {checklistTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.tasks?.length || 0} tasks)</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  {selectedTemplateId ? 'Custom template will be applied on creation' : 'Standard checklist generates on first document upload'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

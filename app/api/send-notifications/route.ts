@@ -9,9 +9,10 @@ export async function POST(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const today = new Date().toISOString().split('T')[0]
-  const in3days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const in7days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const { todayDateString, addDaysToDate, daysFromToday, formatDateOnly } = await import('@/lib/dates')
+  const today = todayDateString()
+  const in3days = addDaysToDate(today, 3)
+  const in7days = addDaysToDate(today, 7)
 
   // Get all active transactions
   const { data: transactions } = await (supabase as any)
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   if (overdue && overdue.length > 0) {
     const rows = overdue.map((t: any) => {
-      const daysOverdue = Math.ceil((Date.now() - new Date(t.due_date).getTime()) / (1000 * 60 * 60 * 24))
+      const daysOverdue = -daysFromToday(t.due_date)
       return `<tr>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#111">${t.task}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280">${t.transactions?.property_address}</td>
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
 
   if (urgent && urgent.length > 0) {
     const rows = urgent.map((t: any) => {
-      const daysUntil = Math.ceil((new Date(t.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      const daysUntil = daysFromToday(t.due_date)
       return `<tr>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#111">${t.task}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280">${t.transactions?.property_address}</td>
@@ -126,16 +127,16 @@ export async function POST(req: NextRequest) {
   // 3. Closing soon (7 days)
   const closingSoon = transactions.filter((t: any) => {
     if (!t.closing_date) return false
-    const days = Math.ceil((new Date(t.closing_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const days = daysFromToday(t.closing_date)
     return days >= 0 && days <= 7
   })
 
   if (closingSoon.length > 0) {
     const rows = closingSoon.map((t: any) => {
-      const days = Math.ceil((new Date(t.closing_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      const days = daysFromToday(t.closing_date)
       return `<tr>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#111">${t.property_address}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280">${new Date(t.closing_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280">${formatDateOnly(t.closing_date)}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#ef4444;font-weight:600">${days === 0 ? 'Today!' : `${days}d away`}</td>
       </tr>`
     }).join('')

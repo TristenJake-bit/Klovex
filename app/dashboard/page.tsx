@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, STATUS_LABELS, STATUS_COLORS } from '@/lib/
 import Link from 'next/link'
 import { ArrowRight, Plus, FileText, Clock, AlertTriangle, CheckCircle, Calendar, Phone, Zap, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { todayDateString, addDaysToDate, daysFromToday, formatDateOnly } from '@/lib/dates'
 import SeedDemoButton from '@/components/dashboard/SeedDemoButton'
 
 export default async function DashboardPage() {
@@ -35,8 +36,8 @@ export default async function DashboardPage() {
   let overdueTasks: any[] = []
   let upcomingTasks: any[] = []
   if (activeIds.length > 0) {
-    const today = new Date().toISOString().split('T')[0]
-    const in7days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const today = todayDateString()
+    const in7days = addDaysToDate(today, 7)
     const { data: overdueRaw } = await (supabase as any).from('transaction_checklists').select('*, transactions(property_address)').in('transaction_id', activeIds).eq('completed', false).lt('due_date', today).order('due_date', { ascending: true }).limit(5)
     overdueTasks = overdueRaw || []
     const { data: upcomingRaw } = await (supabase as any).from('transaction_checklists').select('*, transactions(property_address)').in('transaction_id', activeIds).eq('completed', false).gte('due_date', today).lte('due_date', in7days).order('due_date', { ascending: true }).limit(5)
@@ -53,9 +54,9 @@ export default async function DashboardPage() {
 
   const closingSoon = active.filter(t => {
     if (!t.closing_date) return false
-    const days = Math.ceil((new Date(t.closing_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    const days = daysFromToday(t.closing_date)
     return days >= 0 && days <= 14
-  }).sort((a, b) => new Date(a.closing_date).getTime() - new Date(b.closing_date).getTime())
+  }).sort((a, b) => a.closing_date.localeCompare(b.closing_date))
 
   let revenueThisMonth = 0
   if (isAdmin) {
@@ -187,7 +188,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {overdueTasks.map((t: any) => {
-                const daysOverdue = Math.ceil((Date.now() - new Date(t.due_date).getTime()) / (1000 * 60 * 60 * 24))
+                const daysOverdue = -daysFromToday(t.due_date)
                 return (
                   <Link key={t.id} href={`/dashboard/transactions/${t.transaction_id}`} className="block px-5 py-3 hover:bg-gray-50 transition-colors">
                     <p className="text-sm text-gray-800 font-medium truncate">{t.task}</p>
@@ -209,7 +210,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {upcomingTasks.map((t: any) => {
-                const daysUntil = Math.ceil((new Date(t.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                const daysUntil = daysFromToday(t.due_date)
                 return (
                   <Link key={t.id} href={`/dashboard/transactions/${t.transaction_id}`} className="block px-5 py-3 hover:bg-gray-50 transition-colors">
                     <p className="text-sm text-gray-800 font-medium truncate">{t.task}</p>
@@ -233,7 +234,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="divide-y divide-gray-100">
               {closingSoon.map((t: any) => {
-                const days = Math.ceil((new Date(t.closing_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                const days = daysFromToday(t.closing_date)
                 return (
                   <Link key={t.id} href={`/dashboard/transactions/${t.id}`} className="block px-5 py-3 hover:bg-gray-50 transition-colors">
                     <p className="text-sm text-gray-800 font-medium">{t.property_address}</p>

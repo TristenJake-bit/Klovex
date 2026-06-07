@@ -2,11 +2,12 @@ import { createServerClient2 } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, Clock, FileText, Calendar, Home, AlertTriangle } from 'lucide-react'
+import { formatDateOnly, daysFromToday } from '@/lib/dates'
 
 const STATUS_STEPS = ['pending', 'contract', 'inspection', 'closed']
 const STATUS_LABELS: Record<string,string> = { pending: 'Pending', contract: 'Under Contract', inspection: 'Inspection', closed: 'Closed', cancelled: 'Cancelled' }
 
-function fmt(d: string) { return d ? new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—' }
+function fmt(d: string) { return formatDateOnly(d, { month: 'long', day: 'numeric', year: 'numeric' }) }
 function fmtMoney(n: number) { return n ? `$${Number(n).toLocaleString()}` : '—' }
 
 export default async function ClientPortalPage() {
@@ -48,7 +49,7 @@ export default async function ClientPortalPage() {
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
   const daysToClose = tx.closing_date
-    ? Math.ceil((new Date(tx.closing_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    ? daysFromToday(tx.closing_date)
     : null
 
   return (
@@ -94,7 +95,7 @@ export default async function ClientPortalPage() {
         </div>
         <div className="card p-5">
           <p className="text-xs text-gray-400 mb-1">Closing Date</p>
-          <p className="text-xl font-semibold text-gray-900">{tx.closing_date ? new Date(tx.closing_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}</p>
+          <p className="text-xl font-semibold text-gray-900">{tx.closing_date ? formatDateOnly(tx.closing_date, { month: 'short', day: 'numeric' }) : 'TBD'}</p>
         </div>
         <div className="card p-5">
           <p className="text-xs text-gray-400 mb-1">Days to Close</p>
@@ -163,13 +164,13 @@ export default async function ClientPortalPage() {
           </div>
           <div className="space-y-1">
             {checklist.filter((t: any) => !t.completed).slice(0, 5).map((task: any) => {
-              const isOverdue = new Date(task.due_date) < new Date()
+              const isOverdue = task.due_date ? daysFromToday(task.due_date) < 0 : false
               return (
                 <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg">
                   <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOverdue ? 'bg-red-400' : 'bg-gray-300'}`} />
                   <p className="text-sm text-gray-600 flex-1 truncate">{task.task}</p>
                   {task.due_date && <span className={`text-xs flex-shrink-0 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                    {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {formatDateOnly(task.due_date, { month: 'short', day: 'numeric' })}
                   </span>}
                 </div>
               )

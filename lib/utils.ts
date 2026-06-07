@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
+import { formatDateOnly, parseDateOnly } from '@/lib/dates'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -14,11 +15,12 @@ export function formatCurrency(cents: number): string {
 }
 
 export function formatDate(date: string | Date): string {
-  return format(new Date(date), 'MMM d, yyyy')
+  return formatDateOnly(date)
 }
 
 export function formatRelative(date: string | Date): string {
-  return formatDistanceToNow(new Date(date), { addSuffix: true })
+  const d = typeof date === 'string' ? parseDateOnly(date) : date
+  return formatDistanceToNow(d, { addSuffix: true })
 }
 
 export const STATUS_LABELS: Record<string, string> = {

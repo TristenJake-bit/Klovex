@@ -3,6 +3,7 @@ import { createServerClient2 } from '@/lib/supabase-server'
 import { createClient } from '@supabase/supabase-js'
 import { sendAgentAlert } from '@/lib/email'
 import { createNotification } from '@/lib/notify'
+import { todayDateString, parseDateOnly, addDaysToDate, toDateString } from '@/lib/dates'
 
 export async function POST(req: NextRequest) {
   const authClient = await createServerClient2()
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
 {"summary":"2-3 sentence summary","parties":{"buyer":null,"seller":null,"buyerAgent":null,"sellerAgent":null,"titleCompany":null,"lender":null},"keyTerms":{"purchasePrice":null,"closingDate":null,"earnestMoney":null,"downPayment":null,"loanAmount":null,"propertyAddress":null,"propertyType":null},"contingencies":[{"name":"string","deadline":null,"status":"pending"}],"criticalDates":[{"label":"string","date":"string","daysUntil":0}],"actionItems":[{"priority":"high","task":"string","responsible":"agent"}],"risks":[{"severity":"high","issue":"string"}],"documentType":"Purchase Agreement","completionScore":85,"completenessIssues":[{"type":"missing_signature","description":"string","severity":"high"}],"transactionUpdates":{"property_address":null,"purchase_price":null,"closing_date":null,"status":null,"acceptance_date":null}}
 
-Today is ${new Date().toISOString().split('T')[0]}.
+Today is ${todayDateString()}.
 
 CRITICAL INSTRUCTIONS:
 1. Read EVERY PAGE of this document. Do not skip any sections.
@@ -41,7 +42,7 @@ CRITICAL INSTRUCTIONS:
 5. For purchase_price: Extract as a plain number (e.g. 742500, not "$742,500").
 6. For property_address: Extract the full street address including city, state, and ZIP if available.
 7. For status: Set to "contract" if this is an executed purchase agreement.
-8. For criticalDates: Calculate daysUntil from today (${new Date().toISOString().split('T')[0]}). Include ALL deadlines: inspection, loan approval, appraisal, contingency removals, closing.
+8. For criticalDates: Calculate daysUntil from today (${todayDateString()}). Include ALL deadlines: inspection, loan approval, appraisal, contingency removals, closing.
 9. For completenessIssues: Check for missing_signature, missing_date, blank_field, inconsistency. Severity "high" for missing signatures and critical blank fields.
 10. Only include fields you actually found in the document. Leave others as null.`
 
@@ -143,20 +144,16 @@ CRITICAL INSTRUCTIONS:
           .single()
 
         if (txData) {
-          const acceptance = new Date(txData.created_at)
-          const closing = txData.closing_date ? new Date(txData.closing_date) : new Date(acceptance.getTime() + 30 * 24 * 60 * 60 * 1000)
+          const acceptanceStr = txData.acceptance_date || txData.created_at?.split('T')[0] || todayDateString()
+          const closingStr = txData.closing_date || addDaysToDate(acceptanceStr, 30)
           const isSeller = txData.transaction_type === 'sale'
 
           function daysFrom(days: number): string {
-            const d = new Date(acceptance)
-            d.setDate(d.getDate() + days)
-            return d.toISOString().split('T')[0]
+            return addDaysToDate(acceptanceStr, days)
           }
 
           function closingOffset(days: number): string {
-            const d = new Date(closing)
-            d.setDate(d.getDate() + days)
-            return d.toISOString().split('T')[0]
+            return addDaysToDate(closingStr, days)
           }
 
           const baseTasks = [
@@ -236,11 +233,11 @@ CRITICAL INSTRUCTIONS:
             if (t.days_from_acceptance <= 0) {
               due_date = closingOffset(t.days_from_acceptance)
             } else if (t.phase === 'Closing') {
-              due_date = closing.toISOString().split('T')[0]
+              due_date = closingStr
             } else {
               due_date = daysFrom(t.days_from_acceptance)
             }
-            return { ...t, transaction_id: transactionId, due_date, completed: false }
+            return { ...t, transaction_id: transactionId, due_date, completed: false, side: t.side || 'both' }
           })
 
           await (supabase as any).from('transaction_checklists').insert(tasksWithDates)

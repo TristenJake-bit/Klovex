@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight, GitCompare, Share2, Copy, Check, ExternalLink } from 'lucide-react'
+import { formatDateOnly, daysFromToday, parseDateOnly } from '@/lib/dates'
+import { ArrowLeft, Home, FileText, Clock, Brain, AlertTriangle, CheckCircle, Calendar, User, DollarSign, TrendingUp, ChevronDown, ChevronUp, Loader2, X, Bell, Users, Phone, Mail, Building2, Plus, Trash2, Pencil, ArrowRight, GitCompare, Share2, Copy, Check, ExternalLink, Send } from 'lucide-react'
+import SendEmailPanel from '@/components/dashboard/SendEmailPanel'
 const STATUS_COLORS: Record<string,string> = { pending:'bg-yellow-100 text-yellow-700', contract:'bg-blue-100 text-blue-700', inspection:'bg-purple-100 text-purple-700', loan:'bg-indigo-100 text-indigo-700', closing:'bg-teal-100 text-teal-700', closed:'bg-green-100 text-green-700', cancelled:'bg-red-100 text-red-700' }
 const PRIORITY_COLORS: Record<string,string> = { high:'bg-red-100 text-red-700 border-red-200', medium:'bg-yellow-100 text-yellow-700 border-yellow-200', low:'bg-green-100 text-green-700 border-green-200' }
 const CONTACT_ROLES = ['Buyer', 'Seller', "Buyer's Agent", "Seller's Agent", 'Lender', 'Escrow Officer', 'Title Officer', 'Inspector', 'Appraiser', 'HOA']
@@ -32,6 +34,14 @@ export default function TransactionDetailPage() {
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ purchase_price: '', closing_date: '', transaction_type: '' })
   const [savingEdit, setSavingEdit] = useState(false)
+  const [showEmailPanel, setShowEmailPanel] = useState(false)
+  const [agentName, setAgentName] = useState('')
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [editingTask, setEditingTask] = useState<any>(null)
+  const [taskForm, setTaskForm] = useState({ task: '', phase: 'Contract Received', responsible: 'TC', category: '', side: 'both', days_from_acceptance: '1' })
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   function switchTab(tab: typeof activeTab) {
     setActiveTab(tab)
     window.dispatchEvent(new CustomEvent('help-tab-change', { detail: tab }))
@@ -45,6 +55,11 @@ export default function TransactionDetailPage() {
     supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
     ;(supabase as any).from('transaction_checklists').select('*').eq('transaction_id', id).order('due_date', { ascending: true }).order('phase', { ascending: true }).then(({ data }: any) => { setChecklist(data || []) })
     ;(supabase as any).from('transaction_contacts').select('*').eq('transaction_id', id).order('created_at', { ascending: true }).then(({ data }: any) => { setContacts(data || []) })
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        (supabase as any).from('profiles').select('full_name').eq('id', data.user.id).single().then(({ data: p }: any) => { if (p?.full_name) setAgentName(p.full_name) })
+      }
+    })
   }, [id])
   async function loadAnalysis(docId: string, docName?: string) {
     const supabase = createClient()
@@ -181,6 +196,7 @@ export default function TransactionDetailPage() {
           hasHOA: false,
           yearBuilt: null,
           isSeptic: false,
+          representation: tx.representation || 'dual',
         })
       })
       if (!res.ok) {
@@ -302,7 +318,111 @@ export default function TransactionDetailPage() {
     setChecklist(prev => prev.map(t => t.id === taskId ? { ...t, completed, completed_at: completed ? new Date().toISOString() : null } : t))
   }
 
-  const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+  async function addTask() {
+    if (!taskForm.task.trim()) return
+    const supabase = createClient()
+    const dfa = parseInt(taskForm.days_from_acceptance) || 0
+    const acceptStr = tx?.acceptance_date || tx?.created_at?.split('T')[0]
+    const closeStr = tx?.closing_date
+    let due_date = ''
+    if (acceptStr) {
+      const { addDaysToDate } = await import('@/lib/dates')
+      if (dfa <= 0 && closeStr) { due_date = addDaysToDate(closeStr, dfa) }
+      else if (taskForm.phase === 'Closing' && closeStr) { due_date = closeStr }
+      else { due_date = addDaysToDate(acceptStr, dfa) }
+    }
+    const row = {
+      transaction_id: id,
+      task: taskForm.task.trim(),
+      phase: taskForm.phase,
+      responsible: taskForm.responsible,
+      category: taskForm.category,
+      side: taskForm.side,
+      due_date: due_date || null,
+      completed: false,
+      required: true,
+      is_custom: true,
+    }
+    const { data, error } = await (supabase as any).from('transaction_checklists').insert(row).select().single()
+    if (!error && data) {
+      setChecklist(prev => [...prev, data].sort((a, b) => (a.due_date || '').localeCompare(b.due_date || '')))
+    }
+    setTaskForm({ task: '', phase: 'Contract Received', responsible: 'TC', category: '', side: 'both', days_from_acceptance: '1' })
+    setShowAddTask(false)
+  }
+
+  async function updateTask() {
+    if (!editingTask || !taskForm.task.trim()) return
+    const supabase = createClient()
+    const dfa = parseInt(taskForm.days_from_acceptance) || 0
+    const acceptStr = tx?.acceptance_date || tx?.created_at?.split('T')[0]
+    const closeStr = tx?.closing_date
+    let due_date = editingTask.due_date
+    if (acceptStr) {
+      const { addDaysToDate } = await import('@/lib/dates')
+      if (dfa <= 0 && closeStr) { due_date = addDaysToDate(closeStr, dfa) }
+      else if (taskForm.phase === 'Closing' && closeStr) { due_date = closeStr }
+      else { due_date = addDaysToDate(acceptStr, dfa) }
+    }
+    const updates = {
+      task: taskForm.task.trim(),
+      phase: taskForm.phase,
+      responsible: taskForm.responsible,
+      category: taskForm.category,
+      side: taskForm.side,
+      due_date,
+    }
+    await (supabase as any).from('transaction_checklists').update(updates).eq('id', editingTask.id)
+    setChecklist(prev => prev.map(t => t.id === editingTask.id ? { ...t, ...updates } : t))
+    setEditingTask(null)
+    setShowAddTask(false)
+  }
+
+  async function deleteTask(taskId: string) {
+    const supabase = createClient()
+    await (supabase as any).from('transaction_checklists').delete().eq('id', taskId)
+    setChecklist(prev => prev.filter(t => t.id !== taskId))
+  }
+
+  function startEditTask(task: any) {
+    setEditingTask(task)
+    setTaskForm({
+      task: task.task,
+      phase: task.phase || 'Contract Received',
+      responsible: task.responsible || 'TC',
+      category: task.category || '',
+      side: task.side || 'both',
+      days_from_acceptance: '0',
+    })
+    setShowAddTask(true)
+  }
+
+  async function saveAsTemplate() {
+    if (!templateName.trim()) return
+    setSavingTemplate(true)
+    const tasks = checklist.map(t => ({
+      task: t.task,
+      phase: t.phase,
+      responsible: t.responsible,
+      category: t.category || '',
+      side: t.side || 'both',
+      required: t.required !== false,
+      is_custom: t.is_custom || false,
+      days_from_acceptance: 0,
+    }))
+    try {
+      await fetch('/api/checklist-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: templateName.trim(), tasks }),
+      })
+    } catch {}
+    setSavingTemplate(false)
+    setShowSaveTemplate(false)
+    setTemplateName('')
+  }
+
+  const fmt = (d: string) => d ? formatDateOnly(d) : '—'
   const fmtMoney = (n: number) => n ? `$${n.toLocaleString()}` : '—'
   const fmtSize = (b: number) => b < 1048576 ? `${(b/1024).toFixed(0)} KB` : `${(b/1048576).toFixed(1)} MB`
   const completedCount = checklist.filter(t => t.completed).length
@@ -436,12 +556,21 @@ export default function TransactionDetailPage() {
         )
       })()}
 
-      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
         <div className="card p-3 md:p-5 cursor-pointer hover:border-brand-200 transition-colors" onClick={startEditing}><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Purchase Price</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmtMoney(tx.purchase_price)}</p></div>
         <div className="card p-3 md:p-5 cursor-pointer hover:border-brand-200 transition-colors" onClick={startEditing}><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Close Date</p><p className="text-lg md:text-2xl font-semibold text-gray-900">{fmt(tx.closing_date)}</p></div>
         <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Status</p>
           <select className="text-sm font-medium bg-transparent border-0 p-0 text-gray-900 cursor-pointer focus:outline-none w-full" value={tx.status} onChange={e => handleStatusChange(e.target.value)}>
             <option value="pending">Pending</option><option value="contract">Contract</option><option value="inspection">Inspection</option><option value="loan">Loan & Appraisal</option><option value="closing">Closing</option><option value="closed">Closed</option><option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div className="card p-3 md:p-5"><p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Representing</p>
+          <select className="text-sm font-medium bg-transparent border-0 p-0 text-gray-900 cursor-pointer focus:outline-none w-full" value={tx.representation || 'dual'} onChange={async e => {
+            const supabase = createClient()
+            await (supabase as any).from('transactions').update({ representation: e.target.value }).eq('id', id)
+            setTx((prev: any) => ({ ...prev, representation: e.target.value }))
+          }}>
+            <option value="buyer">Buyer Side</option><option value="seller">Seller Side</option><option value="dual">Dual (Both)</option>
           </select>
         </div>
       </div>
@@ -450,11 +579,9 @@ export default function TransactionDetailPage() {
         const totalTasks = checklist.length
         const completedTasks = checklist.filter(t => t.completed).length
         const pct = Math.round((completedTasks / totalTasks) * 100)
-        const incompleteTasks = checklist.filter(t => !t.completed && t.due_date).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-        const today = new Date(); today.setHours(0, 0, 0, 0)
+        const incompleteTasks = checklist.filter(t => !t.completed && t.due_date).sort((a, b) => a.due_date.localeCompare(b.due_date))
         function getDaysUntil(dateStr: string) {
-          const d = new Date(dateStr); d.setHours(0, 0, 0, 0)
-          return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          return daysFromToday(dateStr)
         }
         function getUrgency(days: number) {
           if (days <= 0) return { color: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500', label: days === 0 ? 'Due today' : `${Math.abs(days)}d overdue` }
@@ -472,6 +599,9 @@ export default function TransactionDetailPage() {
                 <p className="text-xs text-gray-400 mt-0.5">Upcoming deadlines at a glance</p>
               </div>
               <div className="flex items-center gap-3">
+                <a href={`/api/export-calendar?transactionId=${id}`} className="flex items-center gap-1.5 text-xs text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                  <Calendar className="w-3 h-3" /> Export to Calendar
+                </a>
                 <span className="text-sm font-semibold text-gray-900">{pct}%</span>
                 <div className="w-32 bg-gray-200 rounded-full h-2">
                   <div className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-brand-500'}`} style={{ width: `${pct}%` }} />
@@ -502,7 +632,7 @@ export default function TransactionDetailPage() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-xs font-semibold">{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs font-semibold">{formatDateOnly(task.due_date, { month: 'short', day: 'numeric' })}</p>
                         <p className="text-xs font-medium opacity-75">{urgency.label}</p>
                       </div>
                     </div>
@@ -583,10 +713,16 @@ export default function TransactionDetailPage() {
             <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Users className="w-4 h-4 text-brand-500" /> Transaction Contacts</h2>
             <p className="text-xs text-gray-400 mt-0.5">All parties involved in this transaction</p>
           </div>
-          <button onClick={() => { setEditingContact(null); setContactForm({ role: 'Buyer', name: '', email: '', phone: '', company: '' }); setShowContactForm(!showContactForm) }}
-            className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Add Contact
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowEmailPanel(true)}
+              className="flex items-center gap-1.5 text-sm text-brand-600 bg-brand-50 hover:bg-brand-100 px-4 py-2 rounded-lg transition-colors font-medium">
+              <Send className="w-3.5 h-3.5" /> Send Email
+            </button>
+            <button onClick={() => { setEditingContact(null); setContactForm({ role: 'Buyer', name: '', email: '', phone: '', company: '' }); setShowContactForm(!showContactForm) }}
+              className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Add Contact
+            </button>
+          </div>
         </div>
 
         {showContactForm && (
@@ -869,21 +1005,82 @@ export default function TransactionDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             {checklist.length > 0 && (
-              <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
-                {checklist.filter(t => t.completed).length}/{checklist.length} complete
-              </div>
+              <>
+                <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+                  {checklist.filter(t => t.completed).length}/{checklist.length} complete
+                </div>
+                <button onClick={() => setShowSaveTemplate(true)}
+                  className="flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                  Save as Template
+                </button>
+              </>
             )}
+            <button onClick={() => { setEditingTask(null); setTaskForm({ task: '', phase: 'Contract Received', responsible: 'TC', category: '', side: 'both', days_from_acceptance: '1' }); setShowAddTask(!showAddTask) }}
+              className="flex items-center gap-1.5 text-sm text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-2 rounded-lg transition-colors font-medium">
+              <Plus className="w-3.5 h-3.5" /> Add Task
+            </button>
             <button onClick={generateChecklist} disabled={generatingChecklist} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
               {generatingChecklist ? <><Loader2 className="w-3 h-3 animate-spin" />Generating...</> : checklist.length > 0 ? '↺ Regenerate' : '⚡ Generate Checklist'}
             </button>
           </div>
         </div>
 
+        {/* Save as Template modal */}
+        {showSaveTemplate && (
+          <div className="bg-purple-50 rounded-xl p-4 mb-4 border border-purple-200">
+            <p className="text-sm font-medium text-purple-700 mb-2">Save current checklist as a reusable template</p>
+            <div className="flex gap-2">
+              <input className="input text-sm flex-1" placeholder="Template name (e.g. My Buyer Checklist)" value={templateName}
+                onChange={e => setTemplateName(e.target.value)} />
+              <button onClick={saveAsTemplate} disabled={savingTemplate || !templateName.trim()} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
+                {savingTemplate ? 'Saving...' : 'Save'}
+              </button>
+              <button onClick={() => { setShowSaveTemplate(false); setTemplateName('') }} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+            </div>
+            <p className="text-xs text-purple-500 mt-2">This saves all {checklist.length} tasks. You can apply this template when creating new transactions.</p>
+          </div>
+        )}
+
+        {/* Add / Edit task form */}
+        {showAddTask && (
+          <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-200">
+            <p className="text-sm font-medium text-gray-700 mb-3">{editingTask ? 'Edit Task' : 'Add Custom Task'}</p>
+            <div className="space-y-3">
+              <input className="input text-sm" placeholder="Task description *" value={taskForm.task}
+                onChange={e => setTaskForm(f => ({ ...f, task: e.target.value }))} />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <select className="input text-sm" value={taskForm.phase} onChange={e => setTaskForm(f => ({ ...f, phase: e.target.value }))}>
+                  {['Contract Received','Disclosures','Inspections','Loan & Appraisal','Title','Pre-Closing','Closing','Post-Closing'].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <input className="input text-sm" placeholder="Responsible (e.g. TC)" value={taskForm.responsible}
+                  onChange={e => setTaskForm(f => ({ ...f, responsible: e.target.value }))} />
+                <select className="input text-sm" value={taskForm.side} onChange={e => setTaskForm(f => ({ ...f, side: e.target.value }))}>
+                  <option value="both">Both sides</option>
+                  <option value="buyer">Buyer only</option>
+                  <option value="seller">Seller only</option>
+                </select>
+                <input className="input text-sm" type="number" placeholder="Days from acceptance" value={taskForm.days_from_acceptance}
+                  onChange={e => setTaskForm(f => ({ ...f, days_from_acceptance: e.target.value }))} />
+              </div>
+              <input className="input text-sm" placeholder="Category (optional)" value={taskForm.category}
+                onChange={e => setTaskForm(f => ({ ...f, category: e.target.value }))} />
+              <div className="flex gap-2">
+                <button onClick={editingTask ? updateTask : addTask} disabled={!taskForm.task.trim()} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
+                  {editingTask ? 'Update Task' : 'Add Task'}
+                </button>
+                <button onClick={() => { setShowAddTask(false); setEditingTask(null) }} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {checklist.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
             <CheckCircle className="w-8 h-8 text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">No checklist yet</p>
-            <p className="text-xs text-gray-300 mt-1">Click Generate Checklist to create a California-compliant task list</p>
+            <p className="text-xs text-gray-300 mt-1">Click Generate Checklist to create a California-compliant task list, or Add Task to build your own</p>
           </div>
         ) : (
           <>
@@ -897,21 +1094,33 @@ export default function TransactionDetailPage() {
             </div>
             <div className="space-y-1">
               {checklist.filter(t => checklistFilter === 'all' || t.phase === checklistFilter).map((task: any) => (
-                <div key={task.id} className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${task.completed ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+                <div key={task.id} className={`flex items-start gap-3 p-3 rounded-lg transition-colors group ${task.completed ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
                   <input type="checkbox" checked={task.completed} onChange={e => toggleTask(task.id, e.target.checked)}
                     className="mt-0.5 w-4 h-4 rounded accent-brand-500 flex-shrink-0 cursor-pointer" />
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>{task.task}</p>
+                    <p className={`text-sm ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                      {task.task}
+                      {task.is_custom && <span className="ml-1.5 text-xs bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded">Custom</span>}
+                    </p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-xs text-gray-400">{task.phase}</span>
                       <span className="text-xs font-medium text-brand-600">{task.responsible}</span>
                       {task.due_date && (
-                        <span className={`text-xs ${new Date(task.due_date) < new Date() && !task.completed ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                          Due {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <span className={`text-xs ${daysFromToday(task.due_date) < 0 && !task.completed ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                          Due {formatDateOnly(task.due_date, { month: 'short', day: 'numeric' })}
                         </span>
                       )}
                       {task.category && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{task.category}</span>}
+                      {task.side && task.side !== 'both' && <span className={`text-xs px-2 py-0.5 rounded-full ${task.side === 'buyer' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{task.side === 'buyer' ? 'Buyer' : 'Seller'}</span>}
                     </div>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <button onClick={() => startEditTask(task)} className="p-1.5 hover:bg-gray-100 rounded-lg" title="Edit task">
+                      <Pencil className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
+                    <button onClick={() => deleteTask(task.id)} className="p-1.5 hover:bg-red-50 rounded-lg" title="Delete task">
+                      <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -962,6 +1171,20 @@ export default function TransactionDetailPage() {
         )}
       </div>
       </>}
+
+      {/* Send Email Panel */}
+      {showEmailPanel && tx && (
+        <SendEmailPanel
+          transaction={tx}
+          contacts={contacts}
+          agentName={agentName}
+          onClose={() => setShowEmailPanel(false)}
+          onSent={() => {
+            const supabase = createClient()
+            supabase.from('timeline_events').select('*').eq('transaction_id', id).order('created_at', { ascending: false }).then(({ data }) => { setTimeline(data || []) })
+          }}
+        />
+      )}
     </div>
   )
 }

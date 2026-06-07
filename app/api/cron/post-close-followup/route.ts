@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendPostCloseFollowUpEmail } from '@/lib/email-templates'
+import { todayDateString, addDaysToDate } from '@/lib/dates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,9 +16,7 @@ export async function GET(req: Request) {
   }
 
   // Find transactions that closed exactly 30 days ago
-  const targetDate = new Date()
-  targetDate.setDate(targetDate.getDate() - 30)
-  const dateStr = targetDate.toISOString().split('T')[0]
+  const dateStr = addDaysToDate(todayDateString(), -30)
 
   const { data: transactions, error: txError } = await (supabase as any)
     .from('transactions')

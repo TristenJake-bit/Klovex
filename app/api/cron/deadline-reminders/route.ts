@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { createNotification } from '@/lib/notify'
+import { todayDateString, addDaysToDate, daysFromToday, formatDateOnly } from '@/lib/dates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,10 +17,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const threeDaysOut = new Date(today)
-  threeDaysOut.setDate(threeDaysOut.getDate() + 3)
+  const todayStr = todayDateString()
+  const threeDaysOutStr = addDaysToDate(todayStr, 3)
 
   // Get all incomplete checklist tasks with due_date within 3 days (including overdue)
   const { data: tasks, error: taskError } = await (supabase as any)
@@ -27,7 +26,7 @@ export async function GET(req: Request) {
     .select('*, transactions!inner(id, property_address, user_id)')
     .eq('completed', false)
     .not('due_date', 'is', null)
-    .lte('due_date', threeDaysOut.toISOString().split('T')[0])
+    .lte('due_date', threeDaysOutStr)
     .order('due_date', { ascending: true })
 
   if (taskError) {
@@ -58,9 +57,7 @@ export async function GET(req: Request) {
       byUser[userId] = { email: profile.email, name: profile.full_name || 'there', deadlines: [] }
     }
 
-    const dueDate = new Date(task.due_date)
-    dueDate.setHours(0, 0, 0, 0)
-    const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    const daysUntil = daysFromToday(task.due_date)
 
     byUser[userId].deadlines.push({
       task: task.task,
@@ -80,7 +77,7 @@ export async function GET(req: Request) {
     const deadlineRows = deadlines.map(d => {
       const urgencyColor = d.daysUntil <= 0 ? '#ef4444' : d.daysUntil <= 1 ? '#f97316' : d.daysUntil <= 3 ? '#f59e0b' : '#22c55e'
       const urgencyLabel = d.daysUntil < 0 ? `${Math.abs(d.daysUntil)}d overdue` : d.daysUntil === 0 ? 'Due today' : `${d.daysUntil}d left`
-      const formattedDate = new Date(d.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      const formattedDate = formatDateOnly(d.dueDate)
       return `
         <tr>
           <td style="padding:14px 16px;border-bottom:1px solid #f3f4f6">

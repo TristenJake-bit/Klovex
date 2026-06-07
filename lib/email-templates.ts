@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { formatDateOnly } from '@/lib/dates'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -50,7 +51,7 @@ export async function sendWelcomeEmail({
   contacts?: ContactData[]
 }) {
   const closingLine = transaction.closing_date
-    ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Estimated Close</td><td style="padding:8px 0;font-size:14px;font-weight:600;text-align:right">${new Date(transaction.closing_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</td></tr>`
+    ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Estimated Close</td><td style="padding:8px 0;font-size:14px;font-weight:600;text-align:right">${formatDateOnly(transaction.closing_date!, { month: 'long', day: 'numeric', year: 'numeric' })}</td></tr>`
     : ''
   const priceLine = transaction.purchase_price
     ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Purchase Price</td><td style="padding:8px 0;font-size:14px;font-weight:600;text-align:right">$${Number(transaction.purchase_price).toLocaleString()}</td></tr>`
@@ -107,7 +108,7 @@ export async function sendClosingConfirmationEmail({
   contacts?: ContactData[]
 }) {
   const closingDate = transaction.closing_date
-    ? new Date(transaction.closing_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    ? formatDateOnly(transaction.closing_date!, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     : 'TBD'
 
   const partyList = (contacts || []).filter(c => c.name && c.email).map(c =>
